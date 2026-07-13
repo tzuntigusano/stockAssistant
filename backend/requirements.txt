@@ -1,0 +1,19 @@
+# Backend del analizador de acciones — Python 3.14
+# (se descartó pandas-ta por incompatibilidad; los indicadores se calculan a mano)
+#
+# Versiones fijadas para que la instalación sea reproducible. yfinance en
+# especial cambia a menudo: si en el futuro quieres actualizar, hazlo a mano
+# y prueba (los tests de core/ cubren indicadores/veredictos).
+fastapi==0.139.0
+uvicorn[standard]==0.50.2
+yfinance==1.5.1
+pandas==3.0.3
+numpy==2.5.1
+httpx==0.28.1
+pydantic==2.13.4
+python-dotenv==1.2.2
+# Notificaciones de escritorio:
+#   Windows → toast nativo (solo se instala en Windows).
+#   macOS   → usa 'osascript' (integrado, sin dependencia).
+#   Linux   → usa 'notify-send' (paquete libnotify-bin del sistema).
+windows-toasts==1.3.1; sys_platform == "win32"

@@ -1,0 +1,22 @@
+# Python
+backend/venv/
+backend/__pycache__/
+backend/**/__pycache__/
+*.pyc
+
+# Datos locales (cache + tus compras)
+backend/data/
+
+# Claves y configuración local (¡nunca subir la API key!)
+backend/.env
+
+# Node / frontend
+frontend/node_modules/
+frontend/dist/
+
+# Configuración local de herramientas de IA (Claude Code, etc.)
+.claude/settings.local.json
+
+# Varios
+.DS_Store
+*.log

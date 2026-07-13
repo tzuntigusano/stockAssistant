@@ -1,0 +1,3 @@
+Antes de cualquier tarea: lee CLAUDE.md (mapa de contexto: arquitectura, endpoints, BD, reglas críticas, estado) y sigue las reglas de ai-rules.md.
+Responde en castellano, conciso, con diffs mínimos; nunca reescribas archivos enteros ni explores el árbol completo.
+Secretos en backend/.env — no exponerlos. El LLM de la app solo redacta; la lógica de decisión es siempre código determinista.

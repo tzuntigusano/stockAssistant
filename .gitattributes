@@ -1,0 +1,17 @@
+# Normaliza finales de línea en todo el repo (evita ruido en diffs entre SO).
+* text=auto eol=lf
+
+# Scripts de shell / doble clic en macOS: SIEMPRE LF, o no arrancan en Mac/Linux.
+*.sh    text eol=lf
+*.command text eol=lf
+
+# Scripts de Windows: SIEMPRE CRLF.
+*.ps1   text eol=crlf
+*.bat   text eol=crlf
+
+# Binarios (no tocar).
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.ico   binary
+*.db    binary

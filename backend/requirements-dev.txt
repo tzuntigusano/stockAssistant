@@ -1,0 +1,7 @@
+# Dependencias SOLO de desarrollo (no hacen falta para arrancar la app).
+#   Instalar:  venv\Scripts\python -m pip install -r requirements-dev.txt
+#   Lint+formato:  ruff check .   /   ruff format .
+#   Tests:         pytest
+-r requirements.txt
+ruff
+pytest

@@ -1,0 +1,129 @@
+@import "tailwindcss";
+
+/* Paleta y tipografía base — dark limpio, con jerarquía clara */
+@theme {
+  --color-ink: #e6edf3;
+  --color-muted: #8b98a9;
+  --color-bg: #0a0d13;
+  --color-panel: #111722;
+  --color-panel-2: #161d2b;
+  --color-line: #232c3d;
+  --color-bull: #22c55e;
+  --color-bear: #ef4444;
+  --color-accent: #3b82f6;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer components {
+  .card {
+    @apply rounded-xl border border-[var(--color-line)] bg-[var(--color-panel)] p-5;
+  }
+  .card-title {
+    @apply mb-4 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-[var(--color-muted)];
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-[var(--color-accent)] px-4 py-2 text-sm font-medium text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center justify-center rounded-lg border border-[var(--color-line)] bg-[var(--color-panel-2)] px-3 py-2 text-sm text-[var(--color-ink)] transition hover:border-[var(--color-accent)];
+  }
+  .input {
+    @apply w-full rounded-lg border border-[var(--color-line)] bg-[var(--color-panel-2)] px-3 py-2 text-sm text-[var(--color-ink)] outline-none placeholder:text-[var(--color-muted)] focus:border-[var(--color-accent)];
+  }
+  .stat-label {
+    @apply text-xs text-[var(--color-muted)];
+  }
+  .stat-value {
+    @apply text-sm font-medium text-[var(--color-ink)];
+  }
+}
+
+/* Markdown de las respuestas de IA (reporte + chat) */
+.md {
+  @apply text-sm leading-relaxed;
+}
+.md > :first-child {
+  margin-top: 0;
+}
+.md > :last-child {
+  margin-bottom: 0;
+}
+.md p {
+  @apply my-2;
+}
+.md h1,
+.md h2,
+.md h3,
+.md h4 {
+  @apply mb-1 mt-3 font-semibold text-[var(--color-ink)];
+}
+.md h1 {
+  @apply text-base;
+}
+.md h2 {
+  @apply text-sm;
+}
+.md h3,
+.md h4 {
+  @apply text-sm;
+}
+.md strong {
+  @apply font-semibold text-[var(--color-ink)];
+}
+.md em {
+  @apply italic;
+}
+.md ul {
+  @apply my-2 list-disc space-y-1 pl-5;
+}
+.md ol {
+  @apply my-2 list-decimal space-y-1 pl-5;
+}
+.md li {
+  @apply pl-1;
+}
+.md li::marker {
+  color: var(--color-muted);
+}
+.md a {
+  @apply text-[var(--color-accent)] underline;
+}
+.md code {
+  @apply rounded bg-[var(--color-panel-2)] px-1 py-0.5 text-[0.85em];
+}
+.md pre {
+  @apply my-2 overflow-x-auto rounded-lg bg-[var(--color-panel-2)] p-3;
+}
+.md pre code {
+  @apply bg-transparent p-0;
+}
+.md hr {
+  @apply my-3 border-[var(--color-line)];
+}
+.md blockquote {
+  @apply my-2 border-l-2 border-[var(--color-line)] pl-3 text-[var(--color-muted)];
+}
+.md table {
+  @apply my-2 w-full border-collapse text-xs;
+}
+.md th,
+.md td {
+  @apply border border-[var(--color-line)] px-2 py-1 text-left;
+}

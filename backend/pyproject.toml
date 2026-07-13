@@ -1,0 +1,22 @@
+# Configuración de herramientas del backend (lint, formato y tests).
+# No es un paquete instalable: solo centraliza la config de ruff y pytest.
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+# El código de la app vive en backend/; el venv y datos quedan fuera del lint.
+extend-exclude = ["venv", "data"]
+
+[tool.ruff.lint]
+# E/F = errores y pyflakes · I = orden de imports · UP = modernizaciones · B = bugbear.
+select = ["E", "F", "I", "UP", "B"]
+ignore = [
+    "E501",  # longitud de línea: la controla el formateador, no el linter
+    "B008",  # llamadas en defaults: FastAPI usa Depends()/Query() así a propósito
+]
+
+[tool.pytest.ini_options]
+# Los tests importan `core...` y `routers...` como si se ejecutara desde backend/.
+pythonpath = ["."]
+testpaths = ["tests"]
+addopts = "-q"
