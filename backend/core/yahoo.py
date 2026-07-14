@@ -75,7 +75,14 @@ def get_ohlcv(ticker: str, period: str = "1y", interval: str = "1d", prepost: bo
 
     stock = yf.Ticker(ticker)
     # prepost=True añade pre-market y after-hours (solo tiene efecto en intradía).
-    df = stock.history(period=period, interval=interval, prepost=prepost)
+    # Yahoo falla a veces (límite de peticiones por IP, red, región). Al abrir una
+    # ficha por primera vez (caché fría) el front dispara una ráfaga de llamadas y
+    # Yahoo puede devolver 429. Degradamos a vacío en vez de propagar un 500; al
+    # reintentar, la caché ya está caliente y se rellena.
+    try:
+        df = stock.history(period=period, interval=interval, prepost=prepost)
+    except Exception:
+        return []
     if df.empty:
         return []
 
