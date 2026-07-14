@@ -106,14 +106,20 @@ def trendlines_ep(ticker: str, period: str = "1y", interval: str = "1d", prepost
     out = []
     for ln in lines:
         i1 = ln["i1"]
+        y1 = round(trendlines.value_at(ln, i1), 4)
+        y2 = round(trendlines.value_at(ln, last), 4)
         out.append({
             "kind": ln["kind"],
             "touches": ln["touches"],
+            # Para dibujar (mismo formato de tiempo que las velas del /chart).
             "points": [
-                {"time": indicators._time(idxs[i1], intraday),
-                 "value": round(trendlines.value_at(ln, i1), 4)},
-                {"time": indicators._time(idxs[last], intraday),
-                 "value": round(trendlines.value_at(ln, last), 4)},
+                {"time": indicators._time(idxs[i1], intraday), "value": y1},
+                {"time": indicators._time(idxs[last], intraday), "value": y2},
+            ],
+            # Para congelar la línea en una alerta (timestamps absolutos).
+            "anchors": [
+                {"t": int(idxs[i1].timestamp()), "p": y1},
+                {"t": int(idxs[last].timestamp()), "p": y2},
             ],
         })
     return {"lines": out}

@@ -59,7 +59,10 @@ def _phase_message(s: dict, r: dict) -> tuple[str, str]:
     """(título, cuerpo) del aviso, en el idioma guardado en la alerta."""
     lang = s.get("lang", "es")
     tkr = s["ticker"]
-    lvl = f"EMA{s['length']} ({s['tf']})"
+    if s["level_type"] == "trendline":
+        lvl = L(lang, f"la trendline ({s['tf']})", f"the trendline ({s['tf']})")
+    else:
+        lvl = f"EMA{s['length']} ({s['tf']})"
     up = s["direction"] != "short"
     ev = r["event"]
     if ev == setup.BREAK:
@@ -95,7 +98,11 @@ def scan_once() -> list[dict]:
             if len(bars) < setup.DEFAULTS["min_bars"]:
                 continue
             cfg = {"direction": s["direction"], "length": s["length"]}
-            r = setup.advance(s["state"], bars, cfg)
+            if s["level_type"] == "trendline" and s.get("line"):
+                level, prev_level = setup.line_level(s["line"], bars)
+                r = setup.advance(s["state"], bars, cfg, level=level, prev_level=prev_level)
+            else:
+                r = setup.advance(s["state"], bars, cfg)
             if not r.get("ok") or not r["event"]:
                 continue
             last_bar = bars[-1].get("date", "")

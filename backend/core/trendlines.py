@@ -5,13 +5,17 @@ No es un indicador de librería: se aproxima. La idea:
   2. Ajustar rectas entre pivotes del mismo tipo.
   3. Validar: una recta de SOPORTE es válida si los CIERRES la respetan (no
      cierran por debajo) desde su primer ancla; resistencia al revés.
-  4. Puntuar por nº de toques (y recencia) y quedarse con la mejor de cada tipo.
+  4. Puntuar y quedarse con las más ÚTILES: se priorizan las cercanas al precio
+     actual (a punto de romperse/testearse) y con más toques; se devuelven
+     varias candidatas de cada tipo para poder elegir.
 
 Es determinista y transparente. Como es una aproximación, lo suyo es DIBUJARLA
 en el gráfico para validarla con el ojo.
 """
 
 from __future__ import annotations
+
+NEAR_PCT = 0.15  # una recta es "relevante" si su valor de hoy está a ≤15% del precio
 
 
 def _swings(bars: list[dict], k: int) -> tuple[list[int], list[int]]:
@@ -32,11 +36,15 @@ def _median_range(bars: list[dict]) -> float:
     return rngs[len(rngs) // 2] if rngs else 0.0
 
 
-def _fit(bars: list[dict], pivots: list[int], kind: str, tol: float) -> dict | None:
-    """Mejor recta (soporte o resistencia) que pasa por dos pivotes y que los
-    cierres respetan desde el primer ancla hasta el final."""
+def value_at(line: dict, index_in_window: int) -> float:
+    """Valor de la recta en un índice (referido a la ventana usada en detect)."""
+    return line["intercept"] + line["slope"] * index_in_window
+
+
+def _candidates(bars: list[dict], pivots: list[int], kind: str, tol: float) -> list[dict]:
+    """Todas las rectas válidas (cierres las respetan, ≥2 toques) de un tipo."""
     key = "low" if kind == "support" else "high"
-    best = None
+    out = []
     for a in range(len(pivots)):
         for b in range(a + 1, len(pivots)):
             i1, i2 = pivots[a], pivots[b]
@@ -45,7 +53,6 @@ def _fit(bars: list[dict], pivots: list[int], kind: str, tol: float) -> dict | N
             slope = (bars[i2][key] - bars[i1][key]) / (i2 - i1)
             intercept = bars[i1][key] - slope * i1
 
-            # La recta no debe estar rota: los cierres la respetan desde i1.
             broken = False
             for x in range(i1, len(bars)):
                 ly = intercept + slope * x
@@ -63,41 +70,40 @@ def _fit(bars: list[dict], pivots: list[int], kind: str, tol: float) -> dict | N
                 for pi in pivots
                 if pi >= i1 and abs(bars[pi][key] - (intercept + slope * pi)) <= tol
             )
-            score = (touches, i2)  # más toques y ancla más reciente
-            if touches >= 2 and (best is None or score > best["score"]):
-                best = {
-                    "kind": kind,
-                    "i1": i1,
-                    "slope": slope,
-                    "intercept": intercept,
-                    "touches": touches,
-                    "score": score,
-                }
-    return best
+            if touches >= 2:
+                out.append({"kind": kind, "i1": i1, "slope": slope,
+                            "intercept": intercept, "touches": touches})
+    return out
 
 
-def detect(bars: list[dict], k: int = 3, window: int = 150) -> list[dict]:
-    """Devuelve hasta una recta de soporte y una de resistencia sobre las
-    últimas `window` velas. Cada recta: kind, touches, slope/intercept (en
-    índice de vela) e índice del primer ancla `i1`."""
+def detect(bars: list[dict], k: int = 3, window: int = 150, max_per_kind: int = 2) -> list[dict]:
+    """Hasta `max_per_kind` rectas de soporte y de resistencia sobre las últimas
+    `window` velas, priorizando las cercanas al precio y con más toques."""
     if not bars or len(bars) < 2 * k + 5:
         return []
     data = bars[-window:]
     tol = _median_range(data)
+    price = data[-1]["close"]
+    last = len(data) - 1
     highs, lows = _swings(data, k)
+    offset = len(bars) - len(data)
+
     out = []
-    sup = _fit(data, lows, "support", tol)
-    res = _fit(data, highs, "resistance", tol)
-    for line in (sup, res):
-        if not line:
-            continue
-        line.pop("score", None)
-        # Offset del índice al conjunto original (por si se recorta la ventana).
-        line["offset"] = len(bars) - len(data)
-        out.append(line)
+    for kind, pivots in (("support", lows), ("resistance", highs)):
+        cands = _candidates(data, pivots, kind, tol)
+        # Relevancia: primero las cuyo valor de hoy está cerca del precio.
+        near = [c for c in cands if price and abs(value_at(c, last) - price) / price <= NEAR_PCT]
+        pool = near or cands
+        # Más toques y ancla más reciente primero.
+        pool.sort(key=lambda c: (c["touches"], c["i1"]), reverse=True)
+        # Quita casi-duplicadas (mismo valor de hoy dentro de tol).
+        kept: list[dict] = []
+        for c in pool:
+            v = value_at(c, last)
+            if all(abs(v - value_at(o, last)) > tol for o in kept):
+                c["offset"] = offset
+                kept.append(c)
+            if len(kept) >= max_per_kind:
+                break
+        out.extend(kept)
     return out
-
-
-def value_at(line: dict, index_in_window: int) -> float:
-    """Valor de la recta en un índice (referido a la ventana usada en detect)."""
-    return line["intercept"] + line["slope"] * index_in_window

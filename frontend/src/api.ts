@@ -201,6 +201,8 @@ export const api = {
     direction: "long" | "short";
     note?: string;
     lang: string;
+    level_type?: "ema" | "trendline";
+    line?: { t: number; p: number }[];
   }) => req<SetupAlert>(`/api/setups`, { method: "POST", body: JSON.stringify(body) }),
   toggleSetup: (id: number, active: boolean) =>
     req<{ active: boolean }>(`/api/setups/${id}/toggle`, {

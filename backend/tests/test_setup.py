@@ -89,3 +89,15 @@ def test_corto_rebote_bajista_con_volumen():
 def test_pocas_velas_no_evalua():
     r = setup.advance(setup.ARMED, _flat(10), {"direction": "long"})
     assert r["ok"] is False
+
+
+def test_line_level_interpola_la_trendline():
+    import pandas as pd
+
+    ts1 = pd.Timestamp("2026-01-01").timestamp()
+    ts2 = pd.Timestamp("2026-01-02").timestamp()
+    anchors = [{"t": ts1, "p": 100.0}, {"t": ts2, "p": 110.0}]
+    bars = [{"date": "2026-01-01"}, {"date": "2026-01-02"}]
+    level, prev = setup.line_level(anchors, bars)
+    assert round(level, 2) == 110.0  # última vela
+    assert round(prev, 2) == 100.0   # anterior

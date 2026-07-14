@@ -7,6 +7,7 @@ reinicios del backend para no perder en qué fase iba cada alerta.
 
 from __future__ import annotations
 
+import json
 import sqlite3
 import time
 
@@ -31,11 +32,16 @@ def init_db():
             lang TEXT NOT NULL DEFAULT 'es',
             active INTEGER NOT NULL DEFAULT 1,
             created_at REAL NOT NULL,
-            updated_at REAL NOT NULL
+            updated_at REAL NOT NULL,
+            line TEXT DEFAULT ''
         )
         """
     )
     conn.execute("CREATE INDEX IF NOT EXISTS idx_setup_ticker ON setup_alerts(ticker)")
+    # Migración suave: añade `line` (anclas de trendline) si la tabla es antigua.
+    cols = [r[1] for r in conn.execute("PRAGMA table_info(setup_alerts)").fetchall()]
+    if "line" not in cols:
+        conn.execute("ALTER TABLE setup_alerts ADD COLUMN line TEXT DEFAULT ''")
     conn.commit()
     conn.close()
 
@@ -55,12 +61,13 @@ def _row_to_dict(r) -> dict:
         "active": bool(r[10]),
         "created_at": r[11],
         "updated_at": r[12],
+        "line": json.loads(r[13]) if r[13] else None,
     }
 
 
 _COLS = (
     "id, ticker, level_type, length, tf, direction, state, last_bar, note, "
-    "lang, active, created_at, updated_at"
+    "lang, active, created_at, updated_at, line"
 )
 
 
@@ -72,14 +79,16 @@ def create(
     note: str = "",
     lang: str = "es",
     level_type: str = "ema",
+    line: list | None = None,
 ) -> dict:
     now = time.time()
     conn = sqlite3.connect(DB_PATH)
     cur = conn.execute(
         "INSERT INTO setup_alerts "
         "(ticker, level_type, length, tf, direction, state, note, lang, active, "
-        " created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)",
-        (ticker.upper(), level_type, int(length), tf, direction, ARMED, note, lang, now, now),
+        " created_at, updated_at, line) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)",
+        (ticker.upper(), level_type, int(length), tf, direction, ARMED, note, lang, now, now,
+         json.dumps(line) if line else ""),
     )
     conn.commit()
     row = conn.execute(

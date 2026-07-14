@@ -1,21 +1,37 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
-import type { SetupAlert } from "../types";
+import type { SetupAlert, TrendLine } from "../types";
 import { useLang, currentLang } from "../i18n";
 
 const TFS = ["15m", "1h", "4h", "1d", "1wk"];
+
+// Temporalidad → datos que se piden para detectar las trendlines de esa alerta.
+const TL_FETCH: Record<string, { period: string; interval: string }> = {
+  "15m": { period: "1mo", interval: "15m" },
+  "1h": { period: "3mo", interval: "60m" },
+  "4h": { period: "6mo", interval: "4h" },
+  "1d": { period: "1y", interval: "1d" },
+  "1wk": { period: "5y", interval: "1wk" },
+};
 
 const T = {
   es: {
     title: "🎯 Alertas de setup",
     intro:
-      "Vigila una EMA de principio a fin: te avisa en cada fase — rotura, retest y rebote con volumen.",
+      "Vigila una EMA o una trendline de principio a fin: te avisa en cada fase — rotura, retest y rebote con volumen.",
     empty: "Aún no hay ninguna. Arma una abajo.",
     direction: "Dirección",
     long: "Largo (rebote alcista)",
     short: "Corto (rechazo bajista)",
     tf: "Temporalidad",
+    level: "Nivel",
     ema: "EMA",
+    trendline: "Trendline",
+    line: "Línea",
+    noLines: "No se detectaron líneas en esta temporalidad.",
+    support: "Soporte",
+    resistance: "Resistencia",
+    touches: "toques",
     note: "Nota (opcional)",
     notePh: "ej. mi setup de continuación",
     arm: "Armar alerta",
@@ -33,13 +49,20 @@ const T = {
   en: {
     title: "🎯 Setup alerts",
     intro:
-      "Watches an EMA end-to-end: it alerts you at each phase — breakout, retest and bounce with volume.",
+      "Watches an EMA or a trendline end-to-end: it alerts you at each phase — breakout, retest and bounce with volume.",
     empty: "None yet. Arm one below.",
     direction: "Direction",
     long: "Long (bullish bounce)",
     short: "Short (bearish rejection)",
     tf: "Timeframe",
+    level: "Level",
     ema: "EMA",
+    trendline: "Trendline",
+    line: "Line",
+    noLines: "No lines detected on this timeframe.",
+    support: "Support",
+    resistance: "Resistance",
+    touches: "touches",
     note: "Note (optional)",
     notePh: "e.g. my continuation setup",
     arm: "Arm alert",
@@ -66,9 +89,12 @@ const PHASE_COLOR: Record<string, string> = {
 export default function SetupAlertsPanel({ ticker }: { ticker: string }) {
   const t = T[useLang()];
   const [setups, setSetups] = useState<SetupAlert[]>([]);
+  const [levelType, setLevelType] = useState<"ema" | "trendline">("ema");
   const [direction, setDirection] = useState<"long" | "short">("long");
   const [tf, setTf] = useState("1d");
   const [length, setLength] = useState("200");
+  const [lines, setLines] = useState<TrendLine[]>([]);
+  const [lineIdx, setLineIdx] = useState(0);
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -85,17 +111,54 @@ export default function SetupAlertsPanel({ ticker }: { ticker: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ticker]);
 
+  // Detecta las trendlines candidatas cuando el nivel es "trendline".
+  useEffect(() => {
+    if (levelType !== "trendline") return;
+    let cancelled = false;
+    const { period, interval } = TL_FETCH[tf] ?? TL_FETCH["1d"];
+    api
+      .trendlines(ticker, period, interval)
+      .then((r) => {
+        if (cancelled) return;
+        setLines(r.lines);
+        setLineIdx(0);
+      })
+      .catch(() => !cancelled && setLines([]));
+    return () => {
+      cancelled = true;
+    };
+  }, [ticker, tf, levelType]);
+
+  const lineLabel = (l: TrendLine) =>
+    `${l.kind === "support" ? t.support : t.resistance} · ${l.touches} ${t.touches}`;
+
   async function arm() {
     setBusy(true);
     try {
-      await api.createSetup({
-        ticker,
-        tf,
-        length: Math.max(1, Math.min(400, parseInt(length, 10) || 50)),
-        direction,
-        note: note.trim() || undefined,
-        lang: currentLang(),
-      });
+      if (levelType === "trendline") {
+        const chosen = lines[lineIdx];
+        if (!chosen) return;
+        await api.createSetup({
+          ticker,
+          tf,
+          length: 50,
+          direction,
+          note: note.trim() || undefined,
+          lang: currentLang(),
+          level_type: "trendline",
+          line: chosen.anchors,
+        });
+      } else {
+        await api.createSetup({
+          ticker,
+          tf,
+          length: Math.max(1, Math.min(400, parseInt(length, 10) || 50)),
+          direction,
+          note: note.trim() || undefined,
+          lang: currentLang(),
+          level_type: "ema",
+        });
+      }
       setNote("");
       load();
     } catch {
@@ -115,6 +178,8 @@ export default function SetupAlertsPanel({ ticker }: { ticker: string }) {
     load();
   }
 
+  const canArm = levelType === "ema" || lines.length > 0;
+
   return (
     <div className="card">
       <div className="card-title">{t.title}</div>
@@ -129,7 +194,8 @@ export default function SetupAlertsPanel({ ticker }: { ticker: string }) {
             >
               <span className={s.active ? "" : "opacity-50"}>
                 <span className="font-medium">
-                  EMA{s.length} · {s.tf} · {s.direction === "long" ? "▲" : "▼"}
+                  {s.level_type === "trendline" ? t.trendline : `EMA${s.length}`} · {s.tf} ·{" "}
+                  {s.direction === "long" ? "▲" : "▼"}
                 </span>
                 <span
                   className="ml-2 rounded px-1.5 py-0.5 text-xs"
@@ -192,15 +258,47 @@ export default function SetupAlertsPanel({ ticker }: { ticker: string }) {
             ))}
           </select>
         </div>
-        <div className="w-20">
-          <label className="stat-label">{t.ema}</label>
-          <input
+        <div className="w-28">
+          <label className="stat-label">{t.level}</label>
+          <select
             className="input mt-1"
-            inputMode="numeric"
-            value={length}
-            onChange={(e) => setLength(e.target.value)}
-          />
+            value={levelType}
+            onChange={(e) => setLevelType(e.target.value as "ema" | "trendline")}
+          >
+            <option value="ema">{t.ema}</option>
+            <option value="trendline">{t.trendline}</option>
+          </select>
         </div>
+        {levelType === "ema" ? (
+          <div className="w-20">
+            <label className="stat-label">{t.ema}</label>
+            <input
+              className="input mt-1"
+              inputMode="numeric"
+              value={length}
+              onChange={(e) => setLength(e.target.value)}
+            />
+          </div>
+        ) : (
+          <div className="min-w-[160px] flex-1">
+            <label className="stat-label">{t.line}</label>
+            {lines.length > 0 ? (
+              <select
+                className="input mt-1"
+                value={lineIdx}
+                onChange={(e) => setLineIdx(parseInt(e.target.value, 10))}
+              >
+                {lines.map((l, i) => (
+                  <option key={i} value={i}>
+                    {lineLabel(l)}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <p className="mt-1 text-xs text-[var(--color-muted)]">{t.noLines}</p>
+            )}
+          </div>
+        )}
         <div className="min-w-[140px] flex-1">
           <label className="stat-label">{t.note}</label>
           <input
@@ -210,7 +308,7 @@ export default function SetupAlertsPanel({ ticker }: { ticker: string }) {
             onChange={(e) => setNote(e.target.value)}
           />
         </div>
-        <button className="btn" onClick={arm} disabled={busy}>
+        <button className="btn" onClick={arm} disabled={busy || !canArm}>
           {t.arm}
         </button>
       </div>

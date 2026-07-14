@@ -45,6 +45,25 @@ def ema_level(bars: list[dict], length: int) -> tuple[float, float]:
     return float(e.iloc[-1]), float(e.iloc[-2])
 
 
+def line_level(anchors: list[dict], bars: list[dict]) -> tuple[float, float]:
+    """Valor de una trendline CONGELADA en la última vela y la anterior.
+
+    `anchors` = [{"t": unix_s, "p": precio}, {"t": unix_s, "p": precio}]. El
+    offset temporal absoluto se cancela (solo importan las diferencias), así que
+    no hace falta preocuparse de zonas horarias mientras la conversión sea la
+    misma que usó el endpoint al crear los anclas.
+    """
+    t1, p1 = anchors[0]["t"], anchors[0]["p"]
+    t2, p2 = anchors[1]["t"], anchors[1]["p"]
+    slope = (p2 - p1) / (t2 - t1) if t2 != t1 else 0.0
+
+    def at(bar: dict) -> float:
+        ts = pd.Timestamp(bar["date"]).timestamp()
+        return p1 + slope * (ts - t1)
+
+    return at(bars[-1]), at(bars[-2])
+
+
 def _atr(bars: list[dict], window: int) -> float:
     win = bars[-window:]
     ranges = [b["high"] - b["low"] for b in win]
@@ -57,18 +76,26 @@ def _avg_vol(bars: list[dict], window: int) -> float:
     return sum(vols) / len(vols) if vols else 0.0
 
 
-def advance(state: str, bars: list[dict], cfg: dict | None = None) -> dict:
+def advance(
+    state: str,
+    bars: list[dict],
+    cfg: dict | None = None,
+    level: float | None = None,
+    prev_level: float | None = None,
+) -> dict:
     """Evalúa la ÚLTIMA vela cerrada y devuelve el estado siguiente + evento.
 
-    `event` es None si no hay transición. La máquina solo compara precio ↔ nivel,
-    así que sirve igual para EMA o trendline cambiando quién calcula el nivel.
+    `event` es None si no hay transición. La máquina solo compara precio ↔ nivel:
+    si `level`/`prev_level` vienen dados (trendline), se usan; si no, se calcula
+    la EMA de `cfg["length"]`. Así el mismo motor sirve para EMA o trendline.
     """
     c = {**DEFAULTS, **(cfg or {})}
     short = c.get("direction") == "short"
     if not bars or len(bars) < c["min_bars"]:
         return {"ok": False, "state": state, "event": None}
 
-    level, prev_level = ema_level(bars, c["length"])
+    if level is None or prev_level is None:
+        level, prev_level = ema_level(bars, c["length"])
     atr = _atr(bars, c["vol_window"])
     avg_vol = _avg_vol(bars, c["vol_window"])
 

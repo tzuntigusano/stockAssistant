@@ -214,6 +214,7 @@ export interface TrendLine {
   kind: "support" | "resistance";
   touches: number;
   points: LinePoint[];
+  anchors: { t: number; p: number }[]; // timestamps absolutos, para congelar en una alerta
 }
 
 export interface VolumePoint {
@@ -347,7 +348,7 @@ export interface FeedPost {
 export interface SetupAlert {
   id: number;
   ticker: string;
-  level_type: string; // 'ema'
+  level_type: string; // 'ema' | 'trendline'
   length: number;
   tf: string; // '15m' | '1h' | '4h' | '1d' | '1wk'
   direction: "long" | "short";
@@ -356,4 +357,5 @@ export interface SetupAlert {
   active: boolean;
   created_at: number;
   updated_at: number;
+  line: { t: number; p: number }[] | null;
 }
