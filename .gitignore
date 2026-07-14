@@ -13,6 +13,8 @@ backend/.env
 # Node / frontend
 frontend/node_modules/
 frontend/dist/
+# Caché de compilación incremental de TypeScript (artefacto, no versionar).
+*.tsbuildinfo
 
 # Configuración local de herramientas de IA (Claude Code, etc.)
 .claude/settings.local.json
