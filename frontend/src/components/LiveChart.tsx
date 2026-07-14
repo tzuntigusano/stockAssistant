@@ -10,7 +10,7 @@ import {
 import { api } from "../api";
 import { useStore } from "../store/useStore";
 import { useLang } from "../i18n";
-import type { ChartBundle, LinePoint } from "../types";
+import type { ChartBundle, LinePoint, TrendLine } from "../types";
 import EmaSettings from "./EmaSettings";
 import {
   allowedRanges,
@@ -36,6 +36,7 @@ const TX = {
     addEma: "+ Añadir EMA",
     tfNote: 'TF = temporalidad de la EMA. "—" usa la del gráfico.',
     volume: "Volumen",
+    trendlines: "Tendencias",
     refreshTitle: "Refrescar datos",
     refresh: "Refrescar",
     sessionTitleOn: "Horario regular vs extendido (pre-market + after-hours)",
@@ -49,6 +50,7 @@ const TX = {
     addEma: "+ Add EMA",
     tfNote: 'TF = EMA timeframe. "—" uses the chart\'s.',
     volume: "Volume",
+    trendlines: "Trendlines",
     refreshTitle: "Refresh data",
     refresh: "Refresh",
     sessionTitleOn: "Regular vs extended hours (pre-market + after-hours)",
@@ -79,6 +81,7 @@ export default function LiveChart({ symbol }: { symbol: string }) {
   const [emaPanel, setEmaPanel] = useState(false);
   const [bundle, setBundle] = useState<ChartBundle | null>(null);
   const [emaData, setEmaData] = useState<Record<number, LinePoint[]>>({});
+  const [trendlines, setTrendlines] = useState<TrendLine[]>([]);
   const [rtPrice, setRtPrice] = useState<number | null>(null);
   const [realtime, setRealtime] = useState(false);
 
@@ -196,11 +199,16 @@ export default function LiveChart({ symbol }: { symbol: string }) {
       persistEmas(next);
     }
     if (c.indicators !== undefined) {
-      const next: Opts = { volume: false, bollinger: false, levels: false, rsi: false };
-      c.indicators.forEach((k) => {
-        if (k in next) next[k as keyof Opts] = true;
+      const wanted = c.indicators;
+      // Solo tocamos los indicadores que controla el chat; trendlines se conserva.
+      setOpts((cur) => {
+        const next: Opts = { ...cur, volume: false, bollinger: false, levels: false, rsi: false };
+        wanted.forEach((k) => {
+          if (k in next && k !== "trendlines") next[k as keyof Opts] = true;
+        });
+        localStorage.setItem(K.opts, JSON.stringify(next));
+        return next;
       });
-      persistOpts(next);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chartCommand]);
@@ -276,6 +284,22 @@ export default function LiveChart({ symbol }: { symbol: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [symbol, interval, period, prepost, reloadKey, JSON.stringify(emas)]);
 
+  // Líneas de tendencia (solo cuando están activadas).
+  useEffect(() => {
+    if (!opts.trendlines) {
+      setTrendlines([]);
+      return;
+    }
+    let cancelled = false;
+    api
+      .trendlines(symbol, period, interval, prepost)
+      .then((r) => !cancelled && setTrendlines(r.lines))
+      .catch(() => !cancelled && setTrendlines([]));
+    return () => {
+      cancelled = true;
+    };
+  }, [symbol, interval, period, prepost, reloadKey, opts.trendlines]);
+
   // Reconcilia overlays: EMAs (de emaData), Bollinger, volumen y niveles.
   useEffect(() => {
     const chart = chartRef.current;
@@ -287,11 +311,12 @@ export default function LiveChart({ symbol }: { symbol: string }) {
     priceLinesRef.current.forEach((pl) => candle.removePriceLine(pl));
     priceLinesRef.current = [];
 
-    const addLine = (data: any[], color: string, width = 2) => {
+    const addLine = (data: any[], color: string, width = 2, lineStyle = 0) => {
       if (!data || !data.length) return;
       const s = chart.addLineSeries({
         color,
         lineWidth: width as any,
+        lineStyle: lineStyle as any,
         priceLineVisible: false,
         lastValueVisible: false,
       });
@@ -322,6 +347,10 @@ export default function LiveChart({ symbol }: { symbol: string }) {
       );
       overlaysRef.current.push(vol);
     }
+    if (opts.trendlines) {
+      // Discontinuas: soporte en verde, resistencia en rojo.
+      trendlines.forEach((tl) => addLine(tl.points, tl.kind === "support" ? C.bull : C.bear, 2, 2));
+    }
     if (opts.levels) {
       if (bundle.support)
         priceLinesRef.current.push(
@@ -345,7 +374,7 @@ export default function LiveChart({ symbol }: { symbol: string }) {
         );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bundle, emaData, opts, JSON.stringify(emas)]);
+  }, [bundle, emaData, opts, trendlines, JSON.stringify(emas)]);
 
   // RSI en un mini-panel separado.
   useEffect(() => {
@@ -453,6 +482,7 @@ export default function LiveChart({ symbol }: { symbol: string }) {
             ["bollinger", "Bollinger"],
             ["levels", "S/R"],
             ["rsi", "RSI"],
+            ["trendlines", tt.trendlines],
           ] as [keyof Opts, string][]
         ).map(([k, label]) => (
           <label key={k} className="flex cursor-pointer items-center gap-1 text-xs">

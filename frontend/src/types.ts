@@ -210,6 +210,12 @@ export interface LinePoint {
   value: number;
 }
 
+export interface TrendLine {
+  kind: "support" | "resistance";
+  touches: number;
+  points: LinePoint[];
+}
+
 export interface VolumePoint {
   time: ChartTime;
   value: number;

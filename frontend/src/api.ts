@@ -20,6 +20,7 @@ import type {
   SetupAlert,
   Strategy,
   StrategyModules,
+  TrendLine,
   TriggeredAlert,
   WatchlistItem,
 } from "./types";
@@ -123,6 +124,12 @@ export const api = {
       req<{ points: LinePoint[] }>(
         `/api/ema/${ticker}?length=${opts.length}&tf=${opts.tf}&period=${opts.period}` +
           `&interval=${opts.interval}&prepost=${opts.prepost ? true : false}`
+      )
+    ),
+  trendlines: (ticker: string, period = "1y", interval = "1d", prepost = false) =>
+    gate(() =>
+      req<{ lines: TrendLine[] }>(
+        `/api/trendlines/${ticker}?period=${period}&interval=${interval}&prepost=${prepost}`
       )
     ),
   price: (ticker: string) =>

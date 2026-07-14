@@ -3,7 +3,13 @@
 // no obliguen a leer todo el componente (y viceversa).
 
 export type Ema = { id: number; on: boolean; length: number; tf: string; color: string };
-export type Opts = { volume: boolean; bollinger: boolean; levels: boolean; rsi: boolean };
+export type Opts = {
+  volume: boolean;
+  bollinger: boolean;
+  levels: boolean;
+  rsi: boolean;
+  trendlines: boolean;
+};
 
 export const EMA_PALETTE = ["#06b6d4", "#3b82f6", "#f59e0b", "#a855f7", "#ec4899", "#10b981"];
 
@@ -90,7 +96,13 @@ export const DEFAULT_EMAS: Ema[] = [
   { id: 4, on: false, length: 200, tf: "", color: "#a855f7" },
 ];
 
-export const DEFAULT_OPTS: Opts = { volume: true, bollinger: false, levels: true, rsi: false };
+export const DEFAULT_OPTS: Opts = {
+  volume: true,
+  bollinger: false,
+  levels: true,
+  rsi: false,
+  trendlines: false,
+};
 
 // Claves de localStorage.
 export const K = {

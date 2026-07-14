@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
 
-from core import indicators, marketdata, signals, yahoo
+from core import indicators, marketdata, signals, trendlines, yahoo
 from routers.common import analyze
 
 router = APIRouter(prefix="/api", tags=["market"])
@@ -86,6 +86,37 @@ def ema(ticker: str, length: int = 20, tf: str = "", period: str = "1y", interva
             tf_data = indicators.resample(tf_data, rule)
         points = indicators.ema_line(chart_df, indicators.frame(tf_data), length)
     return {"points": points}
+
+
+@router.get("/trendlines/{ticker}")
+def trendlines_ep(ticker: str, period: str = "1y", interval: str = "1d", prepost: bool = False):
+    """Líneas de tendencia detectadas (soporte/resistencia) para dibujar en el
+    gráfico. Cada línea son 2 puntos {time,value} en el mismo formato que las
+    velas del /chart, para que se alineen."""
+    bars = _get_ohlcv(ticker, period, interval, prepost)
+    lines = trendlines.detect(bars)
+    if not lines:
+        return {"lines": []}
+    df = indicators.frame(bars)
+    intraday = indicators._is_intraday(df)
+    window = 150  # debe coincidir con trendlines.detect
+    data = bars[-window:]
+    idxs = list(df.index)[-len(data):]
+    last = len(data) - 1
+    out = []
+    for ln in lines:
+        i1 = ln["i1"]
+        out.append({
+            "kind": ln["kind"],
+            "touches": ln["touches"],
+            "points": [
+                {"time": indicators._time(idxs[i1], intraday),
+                 "value": round(trendlines.value_at(ln, i1), 4)},
+                {"time": indicators._time(idxs[last], intraday),
+                 "value": round(trendlines.value_at(ln, last), 4)},
+            ],
+        })
+    return {"lines": out}
 
 
 @router.get("/price/{ticker}")
