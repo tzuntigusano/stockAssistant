@@ -9,6 +9,7 @@ import BreakoutPanel from "../components/BreakoutPanel";
 import StrategyChat from "../components/StrategyChat";
 import LotsPanel from "../components/LotsPanel";
 import AlertsPanel from "../components/AlertsPanel";
+import SetupAlertsPanel from "../components/SetupAlertsPanel";
 import FeedPanel from "../components/FeedPanel";
 import WatchButton from "../components/WatchButton";
 import RadarToggle from "../components/RadarToggle";
@@ -145,6 +146,8 @@ export default function StockView({
       <StrategyChat ticker={ticker} currency={currency} hasPosition={!!position?.has_position} />
 
       <LotsPanel ticker={ticker} position={position} currency={currency} onChange={loadPosition} />
+
+      <SetupAlertsPanel ticker={ticker} />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <AlertsPanel ticker={ticker} />

@@ -17,6 +17,7 @@ import type {
   RadarSource,
   SearchResult,
   Sentiment,
+  SetupAlert,
   Strategy,
   StrategyModules,
   TriggeredAlert,
@@ -184,6 +185,22 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ enabled }),
     }),
+
+  setups: (ticker: string) => req<SetupAlert[]>(`/api/setups?ticker=${ticker}`),
+  createSetup: (body: {
+    ticker: string;
+    tf: string;
+    length: number;
+    direction: "long" | "short";
+    note?: string;
+    lang: string;
+  }) => req<SetupAlert>(`/api/setups`, { method: "POST", body: JSON.stringify(body) }),
+  toggleSetup: (id: number, active: boolean) =>
+    req<{ active: boolean }>(`/api/setups/${id}/toggle`, {
+      method: "POST",
+      body: JSON.stringify({ active }),
+    }),
+  deleteSetup: (id: number) => req<{ deleted: boolean }>(`/api/setups/${id}`, { method: "DELETE" }),
 
   llmStatus: () => req<{ available: boolean; model: string }>(`/api/llm/status`),
 

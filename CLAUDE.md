@@ -32,6 +32,7 @@ backend/
     radar.py         screener: yf.screen(day_gainers…) + confluencia 10 señales, pesos/umbrales config (labels bilingües; ¡ojo: no shadowear la función L!)
     breakout.py      context(bars) + is_breakout(ctx, precio_vivo) — rotura+volumen+expansión
     breakout_monitor.py  hilo RT: ctx Yahoo/60s + precio Finnhub/8s, NY 9:30-16:00, cooldown 30m
+    setup.py|setup_store.py|setup_monitor.py  ALERTA DE SETUP: máquina de estados determinista rotura→retest→rebote+volumen (largos y cortos; nivel EMA enchufable, futura trendline); estado persistido (sobrevive reinicios); hilo vigila cada 120s y notifica DISTINTO por fase (bilingüe vía `lang` guardado)
     marketdata.py    intradía pluggable; realtime_prices() Finnhub→Yahoo fallback
     gemini_llm.py    Gemini SSE (reintenta 404/500/503): narrate_stream + converse_stream_tools (function calling update_chart → controla el gráfico) + CHART_TOOL
     llm.py           Ollama local (respaldo): narrate_stream + converse_stream (filtra <think>) + chart_command (JSON forzado → controla el gráfico igual que Gemini)
@@ -65,6 +66,7 @@ frontend/src/
 | GET/POST/DELETE watchlist[/{t}] · radarwatch[/{t}] (+/status/{t}) | listas |
 | GET radar/sources?lang= · POST radar?lang= · POST radar/score/{t}?lang= | screener (fuentes/checklist/chips según lang) |
 | GET/POST/DELETE alerts · GET alerts/check | alertas clásicas |
+| GET/POST/DELETE setups · POST setups/{id}/toggle · GET setups/recent\|status · POST setups/scan | alertas de SETUP (rotura→retest→rebote+vol); estado persistido, aviso distinto por fase |
 | GET notifications/status · POST toggle|test | toasts Windows |
 | GET telegram/status|detect · POST telegram/test | móvil |
 | GET breakouts/status|recent · POST toggle|scan?force= | radar rupturas RT |
@@ -93,6 +95,7 @@ frontend/src/
 - ✅ Bilingüe ES/EN completo (selector arriba-dcha): toda la UI + textos deterministas del backend (veredicto, señales, checklist radar, módulos) + la IA responde en el idioma elegido (Gemini y Ollama). Probado e2e. Pendiente: mensajes de la campana (alertas/rupturas) siguen en español (se generan en hilos de fondo).
 - 🔶 Telegram operativo (bot creado, TELEGRAM_* rellenos); notificaciones confirmadas.
 - ✅ Tooling profesional: back `ruff` + `pytest` (config en `backend/pyproject.toml`, deps en `requirements-dev.txt`, 20 tests del core determinista en `backend/tests/`); front `prettier` (`.prettierrc.json`) + scripts `format`/`typecheck`. Raíz: `.gitattributes` (LF en `.sh`/`.command`, CRLF en `.ps1`/`.bat`) + `.editorconfig`. LiveChart partido: `liveChartConfig.ts` (constantes/tipos/helpers) + `EmaSettings.tsx` (panel EMAs); el componente queda centrado en la lógica del gráfico.
+- ✅ Alerta de SETUP (rotura de EMA → retest → rebote con volumen): máquina de estados determinista `core/setup.py` (largos y cortos, nivel EMA "enchufable", 9 tests), persistida en `setup_store`, hilo `setup_monitor` que avisa DISTINTO en cada fase (Fase 1 rotura / Fase 2 retest / Fase 3 rebote+vol, escritorio+Telegram bilingüe), panel `SetupAlertsPanel` en la ficha (armar/pausar/borrar + fase en color). Probado e2e. Pendiente Fase 2: trendlines (detección + toggle en el gráfico + mismo motor con nivel trendline congelado).
 - ✅ CI: `.github/workflows/ci.yml` (backend `ruff check`+`pytest` en Py3.14; frontend `npm ci`+`typecheck`+`prettier --check`). Deps del backend FIJADAS en `requirements.txt` (yfinance 1.5.1, pandas 3.0.3…) para reproducibilidad.
 - ✅ Publicación: `LICENSE` PolyForm Noncommercial 1.0.0. Copia pública saneada regenerable en `C:\Users\Ivan\stock-analyzer-public` (robocopy excluyendo `venv`/`node_modules`/`backend\data`/`.env`/`.claude`/`__pycache__`; verificada sin secretos ni datos personales). Capturas del README pendientes de añadir en `docs/img/` (guía en `docs/img/README.md`; OJO: la cartera muestra posiciones reales).
 - ❌ Sin websocket Finnhub (REST polling 8s). Tweets incrustados requieren internet (widgets.js de X). Cobertura de tests parcial (core determinista; no routers/IO).

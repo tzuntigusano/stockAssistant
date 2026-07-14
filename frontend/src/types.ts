@@ -337,3 +337,17 @@ export interface FeedPost {
   image: string | null; // nombre de fichero servido por /api/feed/image/{name}
   created_at: number; // epoch segundos
 }
+
+export interface SetupAlert {
+  id: number;
+  ticker: string;
+  level_type: string; // 'ema'
+  length: number;
+  tf: string; // '15m' | '1h' | '4h' | '1d' | '1wk'
+  direction: "long" | "short";
+  state: "armed" | "broken" | "retest" | "confirmed";
+  note: string;
+  active: boolean;
+  created_at: number;
+  updated_at: number;
+}
