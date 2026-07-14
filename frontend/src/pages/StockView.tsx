@@ -12,6 +12,7 @@ import AlertsPanel from "../components/AlertsPanel";
 import FeedPanel from "../components/FeedPanel";
 import WatchButton from "../components/WatchButton";
 import RadarToggle from "../components/RadarToggle";
+import DataLoadingBanner from "../components/DataLoadingBanner";
 import { useLang } from "../i18n";
 
 export default function StockView({
@@ -73,8 +74,11 @@ export default function StockView({
 
   if (loading) {
     return (
-      <div className="flex h-64 items-center justify-center text-[var(--color-muted)]">
-        {lang === "en" ? "Loading" : "Cargando"} {ticker}…
+      <div className="space-y-4">
+        <DataLoadingBanner />
+        <div className="flex h-64 items-center justify-center text-[var(--color-muted)]">
+          {lang === "en" ? "Loading" : "Cargando"} {ticker}…
+        </div>
       </div>
     );
   }
@@ -95,6 +99,7 @@ export default function StockView({
 
   return (
     <div className="space-y-4">
+      <DataLoadingBanner />
       <div className="flex flex-wrap justify-end gap-2">
         <RadarToggle ticker={ticker} />
         <WatchButton ticker={ticker} />

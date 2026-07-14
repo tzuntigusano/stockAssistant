@@ -42,12 +42,56 @@ async function req<T>(url: string, options?: RequestInit): Promise<T> {
   return res.json();
 }
 
+// --- Limitador de concurrencia para las llamadas que pegan a Yahoo ---
+// Al abrir una ficha con la caché fría se dispara una ráfaga de peticiones y
+// Yahoo puede responder 429. Servirlas de MAX_CONCURRENT en MAX_CONCURRENT las
+// escalona y evita el límite. Cuando la caché está caliente las respuestas
+// llegan en ms y la cola se vacía al instante, así que en la práctica va "de una".
+const MAX_CONCURRENT = 2;
+let gateActive = 0;
+const gateQueue: (() => void)[] = [];
+let gatePending = 0; // en curso + en cola (para el aviso de carga)
+const pendingListeners = new Set<(n: number) => void>();
+
+function setPending(n: number) {
+  gatePending = n;
+  pendingListeners.forEach((l) => l(gatePending));
+}
+
+/** Suscribe al número de peticiones a Yahoo en curso/en cola. Devuelve un cancelador. */
+export function onPendingData(listener: (n: number) => void): () => void {
+  pendingListeners.add(listener);
+  listener(gatePending);
+  return () => {
+    pendingListeners.delete(listener);
+  };
+}
+
+function gate<T>(task: () => Promise<T>): Promise<T> {
+  setPending(gatePending + 1);
+  const run = async (): Promise<T> => {
+    gateActive++;
+    try {
+      return await task();
+    } finally {
+      gateActive--;
+      const next = gateQueue.shift();
+      if (next) next();
+      setPending(gatePending - 1);
+    }
+  };
+  if (gateActive < MAX_CONCURRENT) return run();
+  return new Promise<void>((resolve) => gateQueue.push(resolve)).then(run);
+}
+
 export const api = {
   search: (q: string) => req<SearchResult[]>(`/api/search?q=${encodeURIComponent(q)}`),
 
-  analysis: (ticker: string) => req<Analysis>(`/api/analysis/${ticker}?lang=${currentLang()}`),
+  analysis: (ticker: string) =>
+    gate(() => req<Analysis>(`/api/analysis/${ticker}?lang=${currentLang()}`)),
 
-  sentiment: (ticker: string) => req<Sentiment>(`/api/sentiment/${ticker}?lang=${currentLang()}`),
+  sentiment: (ticker: string) =>
+    gate(() => req<Sentiment>(`/api/sentiment/${ticker}?lang=${currentLang()}`)),
 
   news: (ticker: string) => req<NewsItem[]>(`/api/news/${ticker}`),
 
@@ -65,16 +109,20 @@ export const api = {
     req<{ deleted: boolean }>(`/api/feed/${id}`, { method: "DELETE" }),
 
   chart: (ticker: string, period = "1y", interval = "1d", prepost = false) =>
-    req<ChartBundle>(
-      `/api/chart/${ticker}?period=${period}&interval=${interval}&prepost=${prepost}`
+    gate(() =>
+      req<ChartBundle>(
+        `/api/chart/${ticker}?period=${period}&interval=${interval}&prepost=${prepost}`
+      )
     ),
   ema: (
     ticker: string,
     opts: { length: number; tf: string; period: string; interval: string; prepost?: boolean }
   ) =>
-    req<{ points: LinePoint[] }>(
-      `/api/ema/${ticker}?length=${opts.length}&tf=${opts.tf}&period=${opts.period}` +
-        `&interval=${opts.interval}&prepost=${opts.prepost ? true : false}`
+    gate(() =>
+      req<{ points: LinePoint[] }>(
+        `/api/ema/${ticker}?length=${opts.length}&tf=${opts.tf}&period=${opts.period}` +
+          `&interval=${opts.interval}&prepost=${opts.prepost ? true : false}`
+      )
     ),
   price: (ticker: string) =>
     req<{ price: number | null; realtime: boolean }>(`/api/price/${ticker}`),
@@ -153,9 +201,11 @@ export const api = {
       body: JSON.stringify(config),
     }),
   radarScoreOne: (ticker: string) =>
-    req<BreakoutScore>(`/api/radar/score/${ticker}?lang=${currentLang()}`, {
-      method: "POST",
-    }),
+    gate(() =>
+      req<BreakoutScore>(`/api/radar/score/${ticker}?lang=${currentLang()}`, {
+        method: "POST",
+      })
+    ),
 };
 
 /**
