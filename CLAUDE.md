@@ -39,7 +39,7 @@ backend/
     telegram.py      bot sendMessage + detect_chats() para averiguar chat_id
     strategy.py      MODULES bilingües (modules(lang)+TEMPLATES) + build_instruction(sel,ticker,lang) + contexto técnico/fundamental/posición + niveles
 frontend/src/
-  api.ts             cliente tipado (espejo endpoints; añade ?lang= a las peticiones con texto del backend) + streamText(url, onToken, onMeta)
+  api.ts             cliente tipado (espejo endpoints; añade ?lang= a las peticiones con texto del backend) + streamText(url, onToken, onMeta). Limitador de concurrencia (gate, MAX_CONCURRENT=2) en las llamadas a Yahoo (analysis/sentiment/chart/ema/radarScoreOne): escalona la ráfaga en frío (evita 429), instantáneo en caliente. onPendingData() alimenta el aviso DataLoadingBanner (sale si tarda >600ms)
   i18n.ts            useLang() (idioma del store) + currentLang()/localeFor() para helpers de formato
   types.ts           interfaces (espejo de respuestas backend)
   store/useStore.ts  zustand: ticker|view|history(goBack)|radarResult|lang(setLang) + puente chat↔gráfico (chartState publica, applyChartCommand/chartCommand inyecta)
