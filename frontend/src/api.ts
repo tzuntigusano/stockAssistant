@@ -211,6 +211,9 @@ export const api = {
     }),
   deleteSetup: (id: number) => req<{ deleted: boolean }>(`/api/setups/${id}`, { method: "DELETE" }),
 
+  health: () => req<{ ok: boolean }>(`/api/health`),
+  restartBackend: () => req<{ restarting: boolean }>(`/api/system/restart`, { method: "POST" }),
+
   llmStatus: () => req<{ available: boolean; model: string }>(`/api/llm/status`),
 
   modelsStatus: () => req<ModelsStatus>(`/api/models/status`),

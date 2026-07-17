@@ -6,6 +6,11 @@ Rutas: ver routers/ (market, portfolio, ai, screener, alerts) y CLAUDE.md.
 
 from __future__ import annotations
 
+import os
+import sys
+import threading
+import time
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -62,3 +67,17 @@ def _startup():
 @app.get("/api/health")
 def health():
     return {"ok": True}
+
+
+@app.post("/api/system/restart")
+def restart_backend():
+    """Reinicia el proceso del backend (re-exec de uvicorn). Útil cuando la
+    sesión interna de yfinance se degrada tras muchas horas y empiezan los 500.
+    Responde antes de reiniciar; el front espera a que /health vuelva."""
+
+    def _do():
+        time.sleep(0.7)  # deja que la respuesta HTTP se envíe antes de reiniciar
+        os.execv(sys.executable, [sys.executable, "-m", "uvicorn", *sys.argv[1:]])
+
+    threading.Thread(target=_do, daemon=True).start()
+    return {"restarting": True}

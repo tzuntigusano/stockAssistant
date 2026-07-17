@@ -7,6 +7,7 @@ import StockView from "./pages/StockView";
 import Dashboard from "./components/Dashboard";
 import Radar from "./components/Radar";
 import AlertsBell from "./components/AlertsBell";
+import RestartButton from "./components/RestartButton";
 
 const T = {
   es: {
@@ -129,6 +130,7 @@ export default function App() {
                 {llm?.available ? `${t.aiPrefix}: ${llm.model}` : t.aiOff}
               </span>
             </div>
+            <RestartButton />
             <AlertsBell />
           </div>
         </div>

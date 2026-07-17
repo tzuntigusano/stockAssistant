@@ -69,6 +69,7 @@ frontend/src/
 | GET radar/sources?lang= · POST radar?lang= · POST radar/score/{t}?lang= | screener (fuentes/checklist/chips según lang) |
 | GET/POST/DELETE alerts · GET alerts/check | alertas clásicas |
 | GET/POST/DELETE setups · POST setups/{id}/toggle · GET setups/recent\|status · POST setups/scan | alertas de SETUP (rotura→retest→rebote+vol); estado persistido, aviso distinto por fase |
+| GET health · POST system/restart | salud + reinicio del backend (re-exec de uvicorn; arregla la sesión degradada de yfinance sin abrir terminal). Botón ⟳ en la cabecera (RestartButton: confirma, espera /health, recarga) |
 | GET notifications/status · POST toggle|test | toasts Windows |
 | GET telegram/status|detect · POST telegram/test | móvil |
 | GET breakouts/status|recent · POST toggle|scan?force= | radar rupturas RT |
