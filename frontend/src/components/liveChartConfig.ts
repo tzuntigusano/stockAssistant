@@ -9,6 +9,7 @@ export type Opts = {
   levels: boolean;
   rsi: boolean;
   trendlines: boolean;
+  avg: boolean; // mi precio medio (coste medio de mis compras)
 };
 
 export const EMA_PALETTE = ["#06b6d4", "#3b82f6", "#f59e0b", "#a855f7", "#ec4899", "#10b981"];
@@ -102,6 +103,7 @@ export const DEFAULT_OPTS: Opts = {
   levels: true,
   rsi: false,
   trendlines: false,
+  avg: false,
 };
 
 // Claves de localStorage.

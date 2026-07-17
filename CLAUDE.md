@@ -48,7 +48,7 @@ frontend/src/
   App.tsx            header (búsqueda, Radar, campana, selector idioma ES/EN) + ruteo ?stock=/?view=
   pages/StockView.tsx  ficha: QuoteHeader, gráfico (toggle TradingView/LiveChart), SentimentPanel,BreakoutPanel,StrategyChat,LotsPanel,AlertsPanel,FeedPanel
   components/*       1 panel = 1 archivo; AlertsBell = campana (rupturas+alertas+toggles)
-                     LiveChart = velas propias (lightweight-charts): intervalo+rango (acoplados, sin 1-2 velas), EMAs (longitud+MTF), volumen, BB, RSI, S/R, horario regular/extendido (prepost, esquina inf-dcha, solo intradía). Aplica chartCommand del store (comando (des)marca EMAs, no borra slots)
+                     LiveChart = velas propias (lightweight-charts): intervalo+rango (acoplados, sin 1-2 velas), EMAs (longitud+MTF), volumen, BB, RSI, S/R, trendlines (toggle), MI MEDIA (coste medio de mis compras, prop `avgPrice` desde StockView; checkbox solo si hay posición), horario regular/extendido (prepost, esquina inf-dcha, solo intradía), PANTALLA COMPLETA (botón ⛶ / Esc: overlay fixed, la caja pasa a flex-1). Aplica chartCommand del store (comando (des)marca EMAs, no borra slots)
                      StrategyChat = prompt por módulos (5 dropdowns + preview) + selector modelo (Gemini/Ollama) + chat que CONTROLA el gráfico (gate palabra clave→force_chart, aplica meta.chart). Respuestas en Markdown (react-markdown, clase .md)
                      FeedPanel = muro por acción: publica link de X (tweet incrustado vía widgets.js, tarjeta fallback), imagen (pegar/arrastrar) o texto; nuevas arriba; paginación "Ver más"; editar/borrar
 ```

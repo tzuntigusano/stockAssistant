@@ -135,7 +135,7 @@ export default function StockView({
           {chartMode === "tv" ? (
             <TradingViewChart symbol={ticker} />
           ) : (
-            <LiveChart symbol={ticker} />
+            <LiveChart symbol={ticker} avgPrice={position?.avg_price ?? null} />
           )}
         </div>
         <SentimentPanel sentiment={sentiment} fallback={analysis.verdict} />

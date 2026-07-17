@@ -37,6 +37,9 @@ const TX = {
     tfNote: 'TF = temporalidad de la EMA. "—" usa la del gráfico.',
     volume: "Volumen",
     trendlines: "Tendencias",
+    avg: "Mi media",
+    expand: "Pantalla completa",
+    exit: "Salir de pantalla completa",
     refreshTitle: "Refrescar datos",
     refresh: "Refrescar",
     sessionTitleOn: "Horario regular vs extendido (pre-market + after-hours)",
@@ -51,6 +54,9 @@ const TX = {
     tfNote: 'TF = EMA timeframe. "—" uses the chart\'s.',
     volume: "Volume",
     trendlines: "Trendlines",
+    avg: "My avg",
+    expand: "Fullscreen",
+    exit: "Exit fullscreen",
     refreshTitle: "Refresh data",
     refresh: "Refresh",
     sessionTitleOn: "Regular vs extended hours (pre-market + after-hours)",
@@ -60,9 +66,16 @@ const TX = {
   },
 } as const;
 
-export default function LiveChart({ symbol }: { symbol: string }) {
+export default function LiveChart({
+  symbol,
+  avgPrice = null,
+}: {
+  symbol: string;
+  avgPrice?: number | null;
+}) {
   const tt = TX[useLang()];
   const [opts, setOpts] = useState<Opts>(() => load(K.opts, DEFAULT_OPTS));
+  const [expanded, setExpanded] = useState(false);
   const [emas, setEmas] = useState<Ema[]>(() => {
     try {
       const raw = localStorage.getItem(K.emas);
@@ -373,8 +386,20 @@ export default function LiveChart({ symbol }: { symbol: string }) {
           } as any)
         );
     }
+    // Mi precio medio (coste medio de mis compras) como línea horizontal.
+    if (opts.avg && avgPrice) {
+      priceLinesRef.current.push(
+        candle.createPriceLine({
+          price: avgPrice,
+          color: "#e879f9",
+          lineWidth: 2,
+          lineStyle: 0,
+          title: tt.avg,
+        } as any)
+      );
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bundle, emaData, opts, trendlines, JSON.stringify(emas)]);
+  }, [bundle, emaData, opts, trendlines, avgPrice, JSON.stringify(emas)]);
 
   // RSI en un mini-panel separado.
   useEffect(() => {
@@ -430,11 +455,19 @@ export default function LiveChart({ symbol }: { symbol: string }) {
     };
   }, [symbol, bundle]);
 
+  // Esc sale de pantalla completa.
+  useEffect(() => {
+    if (!expanded) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setExpanded(false);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [expanded]);
+
   const selectCls =
     "rounded-md border border-[var(--color-line)] bg-[var(--color-panel-2)] px-2 py-1 text-xs text-[var(--color-ink)] outline-none";
 
   return (
-    <div>
+    <div className={expanded ? "fixed inset-0 z-50 flex flex-col bg-[var(--color-bg)] p-3" : ""}>
       {/* Barra superior */}
       <div className="mb-2 flex flex-wrap items-center gap-2">
         {/* Intervalo del gráfico */}
@@ -475,7 +508,7 @@ export default function LiveChart({ symbol }: { symbol: string }) {
           )}
         </div>
 
-        {/* Otros indicadores */}
+        {/* Otros indicadores. "Mi media" solo si hay posición en el valor. */}
         {(
           [
             ["volume", tt.volume],
@@ -483,6 +516,7 @@ export default function LiveChart({ symbol }: { symbol: string }) {
             ["levels", "S/R"],
             ["rsi", "RSI"],
             ["trendlines", tt.trendlines],
+            ...(avgPrice != null ? [["avg", tt.avg]] : []),
           ] as [keyof Opts, string][]
         ).map(([k, label]) => (
           <label key={k} className="flex cursor-pointer items-center gap-1 text-xs">
@@ -498,6 +532,13 @@ export default function LiveChart({ symbol }: { symbol: string }) {
         >
           {loading ? "⏳" : "🔄"} {tt.refresh}
         </button>
+        <button
+          onClick={() => setExpanded((v) => !v)}
+          title={expanded ? tt.exit : tt.expand}
+          className="rounded-md border border-[var(--color-line)] bg-[var(--color-panel-2)] px-2 py-1 text-xs text-[var(--color-muted)] hover:text-white"
+        >
+          {expanded ? "🗗" : "⛶"}
+        </button>
         <span className="text-xs text-[var(--color-muted)]">
           {rtPrice != null && (
             <>
@@ -507,10 +548,12 @@ export default function LiveChart({ symbol }: { symbol: string }) {
         </span>
       </div>
 
-      <div className="relative">
+      <div className={`relative ${expanded ? "min-h-0 flex-1" : ""}`}>
         <div
           ref={boxRef}
-          className="h-[440px] w-full overflow-hidden rounded-xl border border-[var(--color-line)]"
+          className={`w-full overflow-hidden rounded-xl border border-[var(--color-line)] ${
+            expanded ? "h-full" : "h-[440px]"
+          }`}
         />
         {/* Horario regular vs extendido (esquina inferior derecha). Solo tiene
             efecto en intradía; fuera de intradía se muestra deshabilitado. */}
