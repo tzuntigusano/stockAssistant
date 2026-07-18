@@ -66,7 +66,7 @@ frontend/src/
 | GET trendlines/{t}?period=&interval=&prepost= | líneas de tendencia: `points` (dibujo, formato de las velas) + `anchors` (ts absolutos, para congelar en una alerta) |
 | GET analysis/{t}?lang= | quote+indicadores+veredicto diario (veredicto/señales según lang) |
 | GET sentiment/{t}?lang= | veredicto 1h/4h/1d (4h = resample de 60m) |
-| GET/POST/DELETE lots · GET lots/{t} · GET portfolio | transacciones y cartera |
+| GET/POST/PATCH/DELETE lots · GET lots/{t} · GET portfolio | transacciones y cartera. `PATCH /lots/{id}` edita parcialmente (precio/acciones/side/fecha/nota); el coste medio y el P&L se recalculan solos porque `summarize()` siempre recorre las filas actuales |
 | GET/POST/DELETE watchlist[/{t}] · radarwatch[/{t}] (+/status/{t}) | listas |
 | GET radar/sources?lang= · POST radar?lang= · POST radar/score/{t}?lang= | screener (fuentes/checklist/chips según lang) |
 | GET/POST/DELETE alerts · GET alerts/check · POST alerts/{id}/toggle · POST alerts/toggle-all | alertas clásicas (toggle individual y MASIVO sin borrar; `toggle-all` admite `ticker` para limitar) |

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { api } from "../api";
-import type { Position } from "../types";
+import type { Lot, Position } from "../types";
 import { fmtMoney, fmtNum, fmtPct, signColor } from "../helpers";
 import { useLang } from "../i18n";
 
@@ -22,6 +22,9 @@ const T = {
     buy: "Compra",
     sell: "Venta",
     delete: "Eliminar",
+    edit: "Editar",
+    save: "Guardar cambios",
+    cancel: "Cancelar",
     empty:
       "Aún no has registrado operaciones de este valor. Se guardan de forma permanente: solo las introduces una vez.",
     date: "Fecha",
@@ -51,6 +54,9 @@ const T = {
     buy: "Buy",
     sell: "Sell",
     delete: "Delete",
+    edit: "Edit",
+    save: "Save changes",
+    cancel: "Cancel",
     empty:
       "You haven't recorded any transactions for this stock yet. They're saved permanently: enter them once.",
     date: "Date",
@@ -84,6 +90,13 @@ export default function LotsPanel({
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Edición inline: id de la fila en edición + sus campos.
+  const [editId, setEditId] = useState<number | null>(null);
+  const [eSide, setESide] = useState<"buy" | "sell">("buy");
+  const [eDate, setEDate] = useState("");
+  const [ePrice, setEPrice] = useState("");
+  const [eShares, setEShares] = useState("");
+  const [eNote, setENote] = useState("");
 
   async function add() {
     setError(null);
@@ -110,6 +123,37 @@ export default function LotsPanel({
   async function remove(id: number) {
     await api.deleteLot(id);
     onChange();
+  }
+
+  // --- Edición inline de una transacción ---
+  function startEdit(l: Lot) {
+    setError(null);
+    setEditId(l.id);
+    setESide(l.side);
+    setEDate(l.date);
+    setEPrice(String(l.price));
+    setEShares(String(l.shares));
+    setENote(l.note ?? "");
+  }
+
+  async function saveEdit(id: number) {
+    setError(null);
+    const p = parseFloat(ePrice.replace(",", "."));
+    const s = parseFloat(eShares.replace(",", "."));
+    if (!p || !s || p <= 0 || s <= 0) {
+      setError(t.invalid);
+      return;
+    }
+    setBusy(true);
+    try {
+      await api.editLot(id, { price: p, shares: s, side: eSide, date: eDate, note: eNote });
+      setEditId(null);
+      onChange();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
   }
 
   const pos = position;
@@ -172,6 +216,73 @@ export default function LotsPanel({
                 const isSell = l.side === "sell";
                 const pnl = isSell ? l.realized : l.pnl;
                 const pnlPct = isSell ? l.realized_pct : l.pnl_pct;
+                if (editId === l.id) {
+                  return (
+                    <tr key={l.id} className="border-t border-[var(--color-line)]">
+                      <td className="py-2 pr-2">
+                        <select
+                          className="input"
+                          value={eSide}
+                          onChange={(e) => setESide(e.target.value as "buy" | "sell")}
+                        >
+                          <option value="buy">{t.buy}</option>
+                          <option value="sell">{t.sell}</option>
+                        </select>
+                      </td>
+                      <td className="py-2 pr-2">
+                        <input
+                          type="date"
+                          className="input"
+                          value={eDate}
+                          onChange={(e) => setEDate(e.target.value)}
+                        />
+                      </td>
+                      <td className="py-2 pr-2">
+                        <input
+                          className="input w-24"
+                          inputMode="decimal"
+                          value={ePrice}
+                          onChange={(e) => setEPrice(e.target.value)}
+                        />
+                      </td>
+                      <td className="py-2 pr-2">
+                        <input
+                          className="input w-24"
+                          inputMode="decimal"
+                          value={eShares}
+                          onChange={(e) => setEShares(e.target.value)}
+                        />
+                      </td>
+                      <td className="py-2 text-[var(--color-muted)]">—</td>
+                      <td className="py-2 pr-2">
+                        <input
+                          className="input"
+                          value={eNote}
+                          onChange={(e) => setENote(e.target.value)}
+                        />
+                      </td>
+                      <td className="py-2 text-right">
+                        <span className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => saveEdit(l.id)}
+                            disabled={busy}
+                            className="text-[var(--color-bull)] hover:opacity-80 disabled:opacity-50"
+                            title={t.save}
+                          >
+                            ✓
+                          </button>
+                          <button
+                            onClick={() => setEditId(null)}
+                            className="text-[var(--color-muted)] hover:text-white"
+                            title={t.cancel}
+                          >
+                            ↩
+                          </button>
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                }
                 return (
                   <tr key={l.id} className="border-t border-[var(--color-line)]">
                     <td className="py-2">
@@ -197,13 +308,22 @@ export default function LotsPanel({
                     </td>
                     <td className="py-2 text-[var(--color-muted)]">{l.note}</td>
                     <td className="py-2 text-right">
-                      <button
-                        onClick={() => remove(l.id)}
-                        className="text-[var(--color-muted)] hover:text-[var(--color-bear)]"
-                        title={t.delete}
-                      >
-                        ✕
-                      </button>
+                      <span className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => startEdit(l)}
+                          className="text-[var(--color-muted)] hover:text-[var(--color-accent)]"
+                          title={t.edit}
+                        >
+                          ✏️
+                        </button>
+                        <button
+                          onClick={() => remove(l.id)}
+                          className="text-[var(--color-muted)] hover:text-[var(--color-bear)]"
+                          title={t.delete}
+                        >
+                          ✕
+                        </button>
+                      </span>
                     </td>
                   </tr>
                 );

@@ -19,6 +19,16 @@ class LotIn(BaseModel):
     note: str = ""
 
 
+class LotEdit(BaseModel):
+    """Edición parcial: solo se cambian los campos que llegan."""
+
+    price: float | None = None
+    shares: float | None = None
+    side: str | None = None
+    date: str | None = None
+    note: str | None = None
+
+
 def _ticker_cards(tickers: list[str]) -> list[dict]:
     return [
         {
@@ -46,6 +56,21 @@ def add_lot(lot: LotIn):
     return lots.add_transaction(
         lot.ticker, lot.price, lot.shares, side=lot.side, date=lot.date, note=lot.note
     )
+
+
+@router.patch("/lots/{lot_id}")
+def edit_lot(lot_id: int, body: LotEdit):
+    if body.shares is not None and body.shares <= 0:
+        raise HTTPException(400, "Las acciones deben ser positivas")
+    if body.price is not None and body.price <= 0:
+        raise HTTPException(400, "El precio debe ser positivo")
+    updated = lots.update_transaction(
+        lot_id, price=body.price, shares=body.shares, side=body.side,
+        date=body.date, note=body.note,
+    )
+    if not updated:
+        raise HTTPException(404, "Transacción no encontrada")
+    return updated
 
 
 @router.delete("/lots/{lot_id}")

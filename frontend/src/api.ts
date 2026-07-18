@@ -146,6 +146,17 @@ export const api = {
     note?: string;
   }) => req<Lot>(`/api/lots`, { method: "POST", body: JSON.stringify(lot) }),
 
+  editLot: (
+    id: number,
+    body: {
+      price?: number;
+      shares?: number;
+      side?: "buy" | "sell";
+      date?: string;
+      note?: string;
+    }
+  ) => req<Lot>(`/api/lots/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+
   deleteLot: (id: number) => req<{ deleted: boolean }>(`/api/lots/${id}`, { method: "DELETE" }),
 
   strategy: (ticker: string) => req<Strategy>(`/api/strategy/${ticker}`, { method: "POST" }),

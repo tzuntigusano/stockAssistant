@@ -86,6 +86,56 @@ def get_transactions(ticker: str) -> list[dict]:
     return [_row_to_dict(r) for r in rows]
 
 
+def update_transaction(
+    lot_id: int,
+    price: float | None = None,
+    shares: float | None = None,
+    side: str | None = None,
+    date: str | None = None,
+    note: str | None = None,
+) -> dict | None:
+    """Edita una transacción existente. Solo cambia los campos que se pasan.
+
+    El coste medio y el P&L se recalculan solos: summarize() recorre siempre las
+    transacciones actuales, así que no hay nada más que actualizar.
+    """
+    sets, params = [], []
+    if price is not None:
+        sets.append("price = ?")
+        params.append(float(price))
+    if shares is not None:
+        sets.append("shares = ?")
+        params.append(float(shares))
+    if side is not None:
+        sets.append("side = ?")
+        params.append("sell" if side == "sell" else "buy")
+    if date is not None:
+        sets.append("date = ?")
+        params.append(date)
+    if note is not None:
+        sets.append("note = ?")
+        params.append(note)
+    if not sets:
+        return get_transaction(lot_id)
+
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.execute(f"UPDATE lots SET {', '.join(sets)} WHERE id = ?", (*params, lot_id))
+    conn.commit()
+    changed = cur.rowcount > 0
+    conn.close()
+    return get_transaction(lot_id) if changed else None
+
+
+def get_transaction(lot_id: int) -> dict | None:
+    conn = sqlite3.connect(DB_PATH)
+    row = conn.execute(
+        "SELECT id, ticker, side, date, price, shares, note FROM lots WHERE id = ?",
+        (lot_id,),
+    ).fetchone()
+    conn.close()
+    return _row_to_dict(row) if row else None
+
+
 def delete_lot(lot_id: int) -> bool:
     conn = sqlite3.connect(DB_PATH)
     cur = conn.execute("DELETE FROM lots WHERE id = ?", (lot_id,))
