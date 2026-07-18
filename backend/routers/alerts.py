@@ -21,6 +21,11 @@ class NotifyToggle(BaseModel):
     enabled: bool
 
 
+class ActiveIn(BaseModel):
+    active: bool
+    ticker: str | None = None  # solo en el masivo: limita a un valor
+
+
 # --- Alertas de precio / indicadores -----------------------------------------
 @router.get("/alerts")
 def list_alerts(ticker: str | None = None):
@@ -44,6 +49,19 @@ def dismiss_alerts():
     """Quita de la campana las alertas que están saltando (no borra las reglas)."""
     scanner.dismiss()
     return {"ok": True}
+
+
+@router.post("/alerts/toggle-all")
+def toggle_all_alerts(body: ActiveIn):
+    """Activa/pausa todas las alertas de golpe (o las de un valor)."""
+    return {"changed": alerts.set_all_active(body.active, body.ticker)}
+
+
+@router.post("/alerts/{alert_id}/toggle")
+def toggle_alert(alert_id: int, body: ActiveIn):
+    if not alerts.set_active(alert_id, body.active):
+        raise HTTPException(404, "Alerta no encontrada")
+    return {"active": body.active}
 
 
 @router.delete("/alerts/{alert_id}")

@@ -2,7 +2,7 @@ import { create } from "zustand";
 import type { ChartCommand, RadarResult } from "../types";
 
 export type Lang = "es" | "en";
-type View = "dashboard" | "radar";
+type View = "dashboard" | "radar" | "alerts";
 
 interface NavState {
   ticker: string | null;

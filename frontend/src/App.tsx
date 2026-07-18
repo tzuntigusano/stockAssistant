@@ -7,6 +7,7 @@ import StockView from "./pages/StockView";
 import Dashboard from "./components/Dashboard";
 import Radar from "./components/Radar";
 import AlertsBell from "./components/AlertsBell";
+import AlertsView from "./components/AlertsView";
 import RestartButton from "./components/RestartButton";
 
 const T = {
@@ -15,6 +16,8 @@ const T = {
     analyzer: "Analizador",
     radar: "Radar",
     portfolio: "Cartera",
+    alerts: "Alertas",
+    alertsTitle: "Mis alertas (ver y desactivar)",
     radarTitle: "Radar de oportunidades",
     backTo: "Volver a",
     aiPrefix: "IA",
@@ -27,6 +30,8 @@ const T = {
     analyzer: "Analyzer",
     radar: "Radar",
     portfolio: "Portfolio",
+    alerts: "Alerts",
+    alertsTitle: "My alerts (view and pause)",
     radarTitle: "Opportunities radar",
     backTo: "Back to",
     aiPrefix: "AI",
@@ -54,7 +59,9 @@ export default function App() {
       ? prev.ticker
       : prev.view === "radar"
         ? t.radar
-        : t.portfolio
+        : prev.view === "alerts"
+          ? t.alerts
+          : t.portfolio
     : "";
 
   useEffect(() => {
@@ -103,6 +110,17 @@ export default function App() {
           >
             🔎 <span className="hidden sm:inline">{t.radar}</span>
           </button>
+          <button
+            onClick={() => setView("alerts")}
+            className={`shrink-0 rounded-lg px-2.5 py-1.5 text-sm transition ${
+              !ticker && view === "alerts"
+                ? "bg-[var(--color-accent)] text-white"
+                : "text-[var(--color-muted)] hover:text-[var(--color-ink)]"
+            }`}
+            title={t.alertsTitle}
+          >
+            🔔 <span className="hidden sm:inline">{t.alerts}</span>
+          </button>
           <div className="ml-auto flex items-center gap-3">
             {/* Selector de idioma */}
             <div className="flex overflow-hidden rounded-lg border border-[var(--color-line)] text-xs">
@@ -141,6 +159,8 @@ export default function App() {
           <StockView ticker={ticker} llmAvailable={!!llm?.available} />
         ) : view === "radar" ? (
           <Radar />
+        ) : view === "alerts" ? (
+          <AlertsView />
         ) : (
           <Dashboard />
         )}

@@ -148,6 +148,25 @@ def set_active(setup_id: int, active: bool) -> bool:
     return ok
 
 
+def set_all_active(active: bool, ticker: str | None = None) -> int:
+    """Activa/pausa TODOS los setups de golpe (o los de un valor)."""
+    conn = sqlite3.connect(DB_PATH)
+    now = time.time()
+    if ticker:
+        cur = conn.execute(
+            "UPDATE setup_alerts SET active = ?, updated_at = ? WHERE ticker = ?",
+            (1 if active else 0, now, ticker.upper()),
+        )
+    else:
+        cur = conn.execute(
+            "UPDATE setup_alerts SET active = ?, updated_at = ?", (1 if active else 0, now)
+        )
+    conn.commit()
+    n = cur.rowcount
+    conn.close()
+    return n
+
+
 def delete(setup_id: int) -> bool:
     conn = sqlite3.connect(DB_PATH)
     cur = conn.execute("DELETE FROM setup_alerts WHERE id = ?", (setup_id,))

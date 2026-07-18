@@ -108,6 +108,34 @@ def delete(alert_id: int) -> bool:
     return ok
 
 
+def set_active(alert_id: int, active: bool) -> bool:
+    """Activa/pausa una alerta sin borrarla (el vigilante solo mira active=1)."""
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.execute(
+        "UPDATE alerts SET active = ? WHERE id = ?", (1 if active else 0, alert_id)
+    )
+    conn.commit()
+    ok = cur.rowcount > 0
+    conn.close()
+    return ok
+
+
+def set_all_active(active: bool, ticker: str | None = None) -> int:
+    """Activa/pausa TODAS de golpe (o las de un valor). Devuelve cuántas cambió."""
+    conn = sqlite3.connect(DB_PATH)
+    if ticker:
+        cur = conn.execute(
+            "UPDATE alerts SET active = ? WHERE ticker = ?",
+            (1 if active else 0, ticker.upper()),
+        )
+    else:
+        cur = conn.execute("UPDATE alerts SET active = ?", (1 if active else 0,))
+    conn.commit()
+    n = cur.rowcount
+    conn.close()
+    return n
+
+
 def distinct_tickers() -> list[str]:
     conn = sqlite3.connect(DB_PATH)
     rows = conn.execute(

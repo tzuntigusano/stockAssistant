@@ -45,9 +45,11 @@ frontend/src/
   i18n.ts            useLang() (idioma del store) + currentLang()/localeFor() para helpers de formato
   types.ts           interfaces (espejo de respuestas backend)
   store/useStore.ts  zustand: ticker|view|history(goBack)|radarResult|lang(setLang) + puente chat↔gráfico (chartState publica, applyChartCommand/chartCommand inyecta)
-  App.tsx            header (búsqueda, Radar, campana, selector idioma ES/EN) + ruteo ?stock=/?view=
+  App.tsx            header (búsqueda, Radar, Alertas, campana, ⟳ reiniciar, selector idioma ES/EN) + ruteo ?stock=/?view=
   pages/StockView.tsx  ficha: QuoteHeader, gráfico (toggle TradingView/LiveChart), SentimentPanel,BreakoutPanel,StrategyChat,LotsPanel,AlertsPanel,FeedPanel
   components/*       1 panel = 1 archivo; AlertsBell = campana (rupturas+alertas+toggles)
+                     AlertsView = vista central (view="alerts", botón 🔔 Alertas del header): lista TODAS las alertas (clásicas + setups) de todos los valores, con pausar/activar individual, MASIVO (⏸/▶ todas) y borrar; el ticker abre su ficha
+                     RestartButton = ⟳ en el header: POST /system/restart, espera /health y recarga (arregla la sesión degradada de yfinance)
                      LiveChart = velas propias (lightweight-charts): intervalo+rango (acoplados, sin 1-2 velas), EMAs (longitud+MTF), volumen, BB, RSI, S/R, trendlines (toggle), MI MEDIA (coste medio de mis compras, prop `avgPrice` desde StockView; checkbox solo si hay posición), horario regular/extendido (prepost, esquina inf-dcha, solo intradía), PANTALLA COMPLETA (botón ⛶ / Esc: overlay fixed, la caja pasa a flex-1). Aplica chartCommand del store (comando (des)marca EMAs, no borra slots)
                      StrategyChat = prompt por módulos (5 dropdowns + preview) + selector modelo (Gemini/Ollama) + chat que CONTROLA el gráfico (gate palabra clave→force_chart, aplica meta.chart). Respuestas en Markdown (react-markdown, clase .md)
                      FeedPanel = muro por acción: publica link de X (tweet incrustado vía widgets.js, tarjeta fallback), imagen (pegar/arrastrar) o texto; nuevas arriba; paginación "Ver más"; editar/borrar
@@ -67,8 +69,8 @@ frontend/src/
 | GET/POST/DELETE lots · GET lots/{t} · GET portfolio | transacciones y cartera |
 | GET/POST/DELETE watchlist[/{t}] · radarwatch[/{t}] (+/status/{t}) | listas |
 | GET radar/sources?lang= · POST radar?lang= · POST radar/score/{t}?lang= | screener (fuentes/checklist/chips según lang) |
-| GET/POST/DELETE alerts · GET alerts/check | alertas clásicas |
-| GET/POST/DELETE setups · POST setups/{id}/toggle · GET setups/recent\|status · POST setups/scan | alertas de SETUP (rotura→retest→rebote+vol); estado persistido, aviso distinto por fase |
+| GET/POST/DELETE alerts · GET alerts/check · POST alerts/{id}/toggle · POST alerts/toggle-all | alertas clásicas (toggle individual y MASIVO sin borrar; `toggle-all` admite `ticker` para limitar) |
+| GET/POST/DELETE setups · POST setups/{id}/toggle · POST setups/toggle-all · GET setups/recent\|status · POST setups/scan | alertas de SETUP (rotura→retest→rebote+vol); estado persistido, aviso distinto por fase |
 | GET health · POST system/restart | salud + reinicio del backend (re-exec de uvicorn; arregla la sesión degradada de yfinance sin abrir terminal). Botón ⟳ en la cabecera (RestartButton: confirma, espera /health, recarga) |
 | GET notifications/status · POST toggle|test | toasts Windows |
 | GET telegram/status|detect · POST telegram/test | móvil |

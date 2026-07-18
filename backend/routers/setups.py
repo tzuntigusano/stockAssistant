@@ -30,6 +30,7 @@ class SetupIn(BaseModel):
 
 class ToggleIn(BaseModel):
     active: bool
+    ticker: str | None = None  # solo en el masivo: limita a un valor
 
 
 @router.get("/setups")
@@ -55,6 +56,12 @@ def create_setup(body: SetupIn):
         body.ticker, tf=body.tf, length=length, direction=body.direction,
         note=body.note, lang=body.lang, level_type=body.level_type, line=line,
     )
+
+
+@router.post("/setups/toggle-all")
+def toggle_all_setups(body: ToggleIn):
+    """Activa/pausa todos los setups de golpe (o los de un valor)."""
+    return {"changed": setup_store.set_all_active(body.active, body.ticker)}
 
 
 @router.post("/setups/{setup_id}/toggle")

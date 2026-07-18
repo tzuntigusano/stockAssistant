@@ -172,6 +172,16 @@ export const api = {
   addAlert: (a: { ticker: string; type: string; threshold: number | null; note?: string }) =>
     req<Alert>(`/api/alerts`, { method: "POST", body: JSON.stringify(a) }),
   deleteAlert: (id: number) => req<{ deleted: boolean }>(`/api/alerts/${id}`, { method: "DELETE" }),
+  toggleAlert: (id: number, active: boolean) =>
+    req<{ active: boolean }>(`/api/alerts/${id}/toggle`, {
+      method: "POST",
+      body: JSON.stringify({ active }),
+    }),
+  toggleAllAlerts: (active: boolean, ticker?: string) =>
+    req<{ changed: number }>(`/api/alerts/toggle-all`, {
+      method: "POST",
+      body: JSON.stringify({ active, ticker }),
+    }),
   checkAlerts: () => req<{ triggered: TriggeredAlert[] }>(`/api/alerts/check`),
   dismissAlerts: () => req<{ ok: boolean }>(`/api/alerts/dismiss`, { method: "POST" }),
 
@@ -193,7 +203,12 @@ export const api = {
       body: JSON.stringify({ enabled }),
     }),
 
-  setups: (ticker: string) => req<SetupAlert[]>(`/api/setups?ticker=${ticker}`),
+  setups: (ticker?: string) => req<SetupAlert[]>(`/api/setups${ticker ? `?ticker=${ticker}` : ""}`),
+  toggleAllSetups: (active: boolean, ticker?: string) =>
+    req<{ changed: number }>(`/api/setups/toggle-all`, {
+      method: "POST",
+      body: JSON.stringify({ active, ticker }),
+    }),
   createSetup: (body: {
     ticker: string;
     tf: string;
