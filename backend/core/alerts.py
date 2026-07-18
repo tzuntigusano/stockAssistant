@@ -87,13 +87,13 @@ def list_all(ticker: str | None = None) -> list[dict]:
     if ticker:
         rows = conn.execute(
             "SELECT id, ticker, type, threshold, note, active FROM alerts "
-            "WHERE ticker = ? ORDER BY created_at DESC",
+            "WHERE ticker = ? ORDER BY ticker, created_at DESC",
             (ticker.upper(),),
         ).fetchall()
     else:
         rows = conn.execute(
             "SELECT id, ticker, type, threshold, note, active FROM alerts "
-            "ORDER BY created_at DESC"
+            "ORDER BY ticker, created_at DESC"
         ).fetchall()
     conn.close()
     return [_row(r) for r in rows]

@@ -102,11 +102,11 @@ def list_all(ticker: str | None = None) -> list[dict]:
     conn = sqlite3.connect(DB_PATH)
     if ticker:
         rows = conn.execute(
-            f"SELECT {_COLS} FROM setup_alerts WHERE ticker = ? ORDER BY id DESC",
+            f"SELECT {_COLS} FROM setup_alerts WHERE ticker = ? ORDER BY ticker, id DESC",
             (ticker.upper(),),
         ).fetchall()
     else:
-        rows = conn.execute(f"SELECT {_COLS} FROM setup_alerts ORDER BY id DESC").fetchall()
+        rows = conn.execute(f"SELECT {_COLS} FROM setup_alerts ORDER BY ticker, id DESC").fetchall()
     conn.close()
     return [_row_to_dict(r) for r in rows]
 

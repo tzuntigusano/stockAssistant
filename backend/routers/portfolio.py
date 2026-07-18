@@ -85,7 +85,8 @@ def portfolio():
             tc += pos.get("total_cost") or 0
             tu += pos.get("unrealized_pnl") or 0
         items.append(entry)
-    items.sort(key=lambda x: (not x["has_position"], -(x.get("market_value") or 0)))
+    # Alfabetico por ticker (las posiciones abiertas primero).
+    items.sort(key=lambda x: (not x["has_position"], x["ticker"]))
     return {
         "items": items,
         "totals": {

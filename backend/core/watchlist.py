@@ -42,7 +42,7 @@ def remove(ticker: str):
 def tickers() -> list[str]:
     conn = sqlite3.connect(DB_PATH)
     rows = conn.execute(
-        "SELECT ticker FROM watchlist ORDER BY added_at DESC"
+        "SELECT ticker FROM watchlist ORDER BY ticker"
     ).fetchall()
     conn.close()
     return [r[0] for r in rows]
