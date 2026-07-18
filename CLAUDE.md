@@ -77,7 +77,7 @@ frontend/src/
 | GET breakouts/status|recent · POST toggle|scan?force= | radar rupturas RT |
 | GET llm/status · models/status | estado IA (gemini_available, ollama_available, model, models[] incl. "ollama") |
 | GET strategy/modules?lang= | módulos+opciones+plantilla (en el idioma) para construir el prompt en el front |
-| POST strategy-all/stream | INFORME DE CARTERA: una sola llamada a la IA con los datos deterministas (técnico + posición) de cada valor con posición abierta (tope 15); devuelve un informe con sección por valor + visión de conjunto. Ruta sin `{ticker}` a propósito, para no chocar con strategy/{t} |
+| POST strategy-all/stream · chat-all/stream | INFORME DE CARTERA: una sola llamada a la IA con los datos deterministas (técnico + posición) de cada valor con posición abierta (tope 15); devuelve un informe con sección por valor + visión de conjunto. `chat-all` usa ESE MISMO contexto para que el chat entienda toda la cartera (sin control del gráfico: chart=null). Helper compartido `_portfolio_blocks()`. Rutas sin `{ticker}` a propósito, para no chocar con strategy/{t} y chat/{t} |
 | POST strategy/{t}/stream · chat/{t}/stream | IA (Gemini u Ollama según model). Body estrategia: {selections,model,lang}. Body chat: {history,model,chart_state,force_chart,lang}. chat meta 1ª línea = {chart: cfg\|null}: si cfg, orden update_chart {interval?,emas?,indicators?} → LiveChart |
 | GET feed/{t}?offset=&limit= · POST feed/{t} · PATCH/DELETE feed/{id} · GET feed/image/{name} | muro por acción (posts + imágenes) |
 

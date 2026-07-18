@@ -32,6 +32,12 @@ const LS = {
       "Muéstrame solo la EMA 200 en 4h",
       "Añade el volumen al gráfico",
     ],
+    suggestionsAll: [
+      "¿Cuál de mis valores está peor?",
+      "¿Dónde debería recortar pérdidas?",
+      "¿Estoy demasiado concentrado?",
+      "¿Cuál tiene mejor pinta técnica?",
+    ],
     title: "🎯 Estrategia y chat (IA)",
     reconfig: "↻ Reconfigurar",
     model: "Modelo:",
@@ -66,6 +72,12 @@ const LS = {
       "How does it affect my position?",
       "Show only the 200 EMA in 4h",
       "Add volume to the chart",
+    ],
+    suggestionsAll: [
+      "Which of my holdings looks worst?",
+      "Where should I cut losses?",
+      "Am I too concentrated?",
+      "Which one looks best technically?",
     ],
     title: "🎯 Strategy & chat (AI)",
     reconfig: "↻ Reconfigure",
@@ -269,16 +281,18 @@ export default function StrategyChat({
     const history = [...messages, { role: "user" as const, content: question }];
     setMessages([...history, { role: "assistant", content: "" }]);
     setBusy(true);
+    const all = scope === "all";
     try {
       await streamText(
-        `/api/chat/${ticker}/stream`,
+        // En ámbito cartera el chat conoce TODOS mis valores (y no toca el gráfico).
+        all ? `/api/chat-all/stream` : `/api/chat/${ticker}/stream`,
         {
           method: "POST",
           body: JSON.stringify({
             history,
             model,
             chart_state: chartState,
-            force_chart: looksLikeChartCommand(question),
+            force_chart: !all && looksLikeChartCommand(question),
             lang,
           }),
         },
@@ -441,7 +455,7 @@ export default function StrategyChat({
       {generated && (
         <div className="mt-4">
           <div className="mb-2 flex flex-wrap gap-2">
-            {L.suggestions.map((s) => (
+            {(scope === "all" ? L.suggestionsAll : L.suggestions).map((s) => (
               <button
                 key={s}
                 className="btn-ghost text-xs"

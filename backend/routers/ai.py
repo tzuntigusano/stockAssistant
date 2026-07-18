@@ -69,16 +69,12 @@ def strategy_modules(lang: str = "es"):
 MAX_PORTFOLIO_TICKERS = 15  # tope de seguridad: evita un prompt desmesurado
 
 
-@router.post("/strategy-all/stream")
-def build_portfolio_strategy_stream(body: StrategyIn):
-    """Informe de TODA la cartera en UNA sola llamada a la IA.
+def _portfolio_blocks(lang: str) -> tuple[list[str], list[str]]:
+    """Datos deterministas (técnico + mi posición) de cada valor con posición.
 
-    Recorre los valores con posición abierta, arma un bloque determinista por
-    cada uno (técnico + mi posición) y pide un único informe con una sección
-    por valor y una visión de conjunto. Una sola llamada mantiene a raya la
-    cuota de Gemini (el free tier da 429 enseguida).
+    Lo usan tanto el informe de cartera como el chat de cartera, para que la IA
+    hable siempre sobre las mismas cifras calculadas.
     """
-    lang = body.lang or "es"
     blocks, tickers = [], []
     for t in lots.all_tickers():
         if len(tickers) >= MAX_PORTFOLIO_TICKERS:
@@ -96,9 +92,26 @@ def build_portfolio_strategy_stream(body: StrategyIn):
             + "\n"
             + strategy.build_position_context(position)
         )
+    return tickers, blocks
 
+
+def _no_positions(lang: str) -> HTTPException:
+    return HTTPException(404, L(lang, "No tienes posiciones abiertas.", "You have no open positions."))
+
+
+@router.post("/strategy-all/stream")
+def build_portfolio_strategy_stream(body: StrategyIn):
+    """Informe de TODA la cartera en UNA sola llamada a la IA.
+
+    Recorre los valores con posición abierta, arma un bloque determinista por
+    cada uno (técnico + mi posición) y pide un único informe con una sección
+    por valor y una visión de conjunto. Una sola llamada mantiene a raya la
+    cuota de Gemini (el free tier da 429 enseguida).
+    """
+    lang = body.lang or "es"
+    tickers, blocks = _portfolio_blocks(lang)
     if not tickers:
-        raise HTTPException(404, L(lang, "No tienes posiciones abiertas.", "You have no open positions."))
+        raise _no_positions(lang)
 
     instruction = L(
         lang,
@@ -184,6 +197,51 @@ def build_strategy_stream(ticker: str, body: StrategyIn):
             yield from provider.narrate_stream(prompt, body.model, lang)
         except Exception as e:
             yield f"\n[No se pudo generar el análisis con IA: {e}]"
+
+    return StreamingResponse(gen(), media_type="text/plain; charset=utf-8")
+
+
+@router.post("/chat-all/stream")
+def chat_all_stream(body: ChatIn):
+    """Chat sobre TODA la cartera (mismo contexto que el informe de cartera).
+
+    No controla el gráfico: el gráfico es de un valor concreto y aquí hablamos
+    de todos, así que la meta va siempre con chart=null.
+    """
+    use_ollama = _is_ollama(body.model)
+    if use_ollama and not llm.is_available():
+        raise HTTPException(503, "Ollama no está disponible en localhost:11434")
+    if not use_ollama and not gemini_llm.is_available():
+        raise HTTPException(503, "Falta GEMINI_API_KEY en backend/.env")
+
+    lang = body.lang or "es"
+    tickers, blocks = _portfolio_blocks(lang)
+    if not tickers:
+        raise _no_positions(lang)
+
+    context = (
+        L(lang, "MI CARTERA COMPLETA (datos ya calculados; no inventes cifras):",
+          "MY WHOLE PORTFOLIO (already computed data; do not invent figures):")
+        + "\n\n"
+        + "\n\n".join(blocks)
+    )
+
+    history = body.history
+    if not history:
+        if not body.question:
+            raise HTTPException(400, "Falta la pregunta")
+        history = [{"role": "user", "content": body.question}]
+    if history and history[-1].get("role") == "user":
+        history = [*history[:-1], {**history[-1], "content": (history[-1].get("content") or "") + lang_directive(lang)}]
+
+    provider = llm if use_ollama else gemini_llm
+
+    def gen():
+        yield json.dumps({"chart": None}, ensure_ascii=False) + "\n\n"
+        try:
+            yield from provider.converse_stream(context, history, body.model, lang)
+        except Exception as e:
+            yield f"\n[Error de IA: {e}]"
 
     return StreamingResponse(gen(), media_type="text/plain; charset=utf-8")
 
