@@ -51,7 +51,7 @@ frontend/src/
                      AlertsView = vista central (view="alerts", botón 🔔 Alertas del header): lista TODAS las alertas (clásicas + setups) de todos los valores, con pausar/activar individual, MASIVO (⏸/▶ todas) y borrar; el ticker abre su ficha
                      RestartButton = ⟳ en el header: POST /system/restart, espera /health y recarga (arregla la sesión degradada de yfinance)
                      LiveChart = velas propias (lightweight-charts): intervalo+rango (acoplados, sin 1-2 velas), EMAs (longitud+MTF), volumen, BB, RSI, S/R, trendlines (toggle), MI MEDIA (coste medio de mis compras, prop `avgPrice` desde StockView; checkbox solo si hay posición), horario regular/extendido (prepost, esquina inf-dcha, solo intradía), PANTALLA COMPLETA (botón ⛶ / Esc: overlay fixed, la caja pasa a flex-1). Aplica chartCommand del store (comando (des)marca EMAs, no borra slots)
-                     StrategyChat = prompt por módulos (5 dropdowns + preview) + selector modelo (Gemini/Ollama) + chat que CONTROLA el gráfico (gate palabra clave→force_chart, aplica meta.chart). Respuestas en Markdown (react-markdown, clase .md)
+                     StrategyChat = prompt por módulos (5 dropdowns + preview) + selector modelo (Gemini/Ollama) + ÁMBITO (Stock actual / Todos mis stocks → POST strategy-all/stream; en modo cartera se ocultan los módulos y el chat posterior sigue atado al valor abierto) + chat que CONTROLA el gráfico (gate palabra clave→force_chart, aplica meta.chart). Respuestas en Markdown (react-markdown, clase .md)
                      FeedPanel = muro por acción: publica link de X (tweet incrustado vía widgets.js, tarjeta fallback), imagen (pegar/arrastrar) o texto; nuevas arriba; paginación "Ver más"; editar/borrar
 ```
 
@@ -77,6 +77,7 @@ frontend/src/
 | GET breakouts/status|recent · POST toggle|scan?force= | radar rupturas RT |
 | GET llm/status · models/status | estado IA (gemini_available, ollama_available, model, models[] incl. "ollama") |
 | GET strategy/modules?lang= | módulos+opciones+plantilla (en el idioma) para construir el prompt en el front |
+| POST strategy-all/stream | INFORME DE CARTERA: una sola llamada a la IA con los datos deterministas (técnico + posición) de cada valor con posición abierta (tope 15); devuelve un informe con sección por valor + visión de conjunto. Ruta sin `{ticker}` a propósito, para no chocar con strategy/{t} |
 | POST strategy/{t}/stream · chat/{t}/stream | IA (Gemini u Ollama según model). Body estrategia: {selections,model,lang}. Body chat: {history,model,chart_state,force_chart,lang}. chat meta 1ª línea = {chart: cfg\|null}: si cfg, orden update_chart {interval?,emas?,indicators?} → LiveChart |
 | GET feed/{t}?offset=&limit= · POST feed/{t} · PATCH/DELETE feed/{id} · GET feed/image/{name} | muro por acción (posts + imágenes) |
 

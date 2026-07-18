@@ -45,6 +45,12 @@ const LS = {
     intro2: "); no inventa cifras. Después podrás seguir preguntándole.",
     analyzing: "Analizando…",
     generate: "Generar estrategia",
+    scope: "Ámbito",
+    scopeCurrent: "Stock actual",
+    scopeAll: "Todos mis stocks",
+    generateAll: "Generar informe de cartera",
+    previewAll:
+      "Informe de TODA mi cartera: una sección por cada valor donde tengo dinero (situación técnica, qué hacer con mi posición y niveles clave) más una visión de conjunto. Se genera en una sola llamada a la IA.",
     you: "Tú",
     analyst: "Analista IA",
     askPlaceholder: "Pregunta sobre la estrategia…",
@@ -74,6 +80,12 @@ const LS = {
     intro2: "); it doesn't invent figures. Then you can keep asking.",
     analyzing: "Analyzing…",
     generate: "Generate strategy",
+    scope: "Scope",
+    scopeCurrent: "Current stock",
+    scopeAll: "All my holdings",
+    generateAll: "Generate portfolio report",
+    previewAll:
+      "Report on MY WHOLE PORTFOLIO: one section per holding (technical situation, what to do with my position and key levels) plus an overall view. Generated in a single AI call.",
     you: "You",
     analyst: "AI analyst",
     askPlaceholder: "Ask about the strategy…",
@@ -121,6 +133,8 @@ export default function StrategyChat({
   const [error, setError] = useState<string | null>(null);
   const [models, setModels] = useState<ModelsStatus | null>(null);
   const [model, setModel] = useState<string>(() => localStorage.getItem(MODEL_KEY) || "");
+  // Ámbito del informe: solo este valor o toda mi cartera.
+  const [scope, setScope] = useState<"current" | "all">("current");
   const [mods, setMods] = useState<StrategyModules | null>(null);
   const [sel, setSel] = useState<Record<string, string>>(() => {
     try {
@@ -225,19 +239,21 @@ export default function StrategyChat({
   }
 
   async function generate() {
+    const all = scope === "all";
     setBusy(true);
     setError(null);
     setLevels(null);
     setMessages([
-      { role: "user", content: preview() },
+      { role: "user", content: all ? L.previewAll : preview() },
       { role: "assistant", content: "" },
     ]);
     try {
       await streamText(
-        `/api/strategy/${ticker}/stream`,
+        all ? `/api/strategy-all/stream` : `/api/strategy/${ticker}/stream`,
         { method: "POST", body: JSON.stringify({ selections: sel, model, lang }) },
         appendLast,
-        (meta) => setLevels(meta.levels)
+        // El informe de cartera no trae niveles de un valor concreto.
+        (meta) => setLevels(all ? null : meta.levels)
       );
     } catch (e) {
       setError((e as Error).message);
@@ -316,12 +332,24 @@ export default function StrategyChat({
         {isOllama && available && (
           <span className="text-xs text-[var(--color-muted)]">{L.local}</span>
         )}
+
+        {/* Ámbito: este valor o toda la cartera */}
+        <span className="stat-label ml-2">{L.scope}</span>
+        <select
+          value={scope}
+          onChange={(e) => setScope(e.target.value as "current" | "all")}
+          disabled={busy}
+          className="rounded-md border border-[var(--color-line)] bg-[var(--color-panel-2)] px-2 py-1 text-xs text-[var(--color-ink)] outline-none"
+        >
+          <option value="current">{L.scopeCurrent}</option>
+          <option value="all">{L.scopeAll}</option>
+        </select>
       </div>
 
       {!generated && (
         <>
-          {/* Módulos del prompt */}
-          {mods && (
+          {/* Módulos del prompt (solo aplican al valor actual) */}
+          {mods && scope === "current" && (
             <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
               {mods.order.map((key) => (
                 <label key={key} className="text-xs">
@@ -351,7 +379,9 @@ export default function StrategyChat({
           {/* Previsualización del prompt */}
           <div className="mb-3 rounded-lg border border-[var(--color-line)] bg-[var(--color-panel-2)] p-3">
             <div className="stat-label mb-1">{L.promptLabel}</div>
-            <p className="text-sm leading-relaxed text-[var(--color-ink)]/90">{preview()}</p>
+            <p className="text-sm leading-relaxed text-[var(--color-ink)]/90">
+              {scope === "all" ? L.previewAll : preview()}
+            </p>
           </div>
 
           <p className="mb-3 text-xs text-[var(--color-muted)]">
@@ -360,7 +390,7 @@ export default function StrategyChat({
             {L.intro2}
           </p>
           <button className="btn" onClick={generate} disabled={busy || !available}>
-            {busy ? L.analyzing : L.generate}
+            {busy ? L.analyzing : scope === "all" ? L.generateAll : L.generate}
           </button>
         </>
       )}
