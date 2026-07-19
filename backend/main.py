@@ -21,12 +21,14 @@ from core import (
     feed,
     lots,
     monitor,
+    paper_monitor,
+    paper_store,
     radarwatch,
     setup_monitor,
     setup_store,
     watchlist,
 )
-from routers import ai, market, portfolio, screener, setups
+from routers import ai, market, paper, portfolio, screener, setups
 from routers import alerts as alerts_router
 from routers import feed as feed_router
 from settings import CORS_ORIGINS
@@ -48,6 +50,7 @@ app.include_router(screener.router)
 app.include_router(alerts_router.router)
 app.include_router(feed_router.router)
 app.include_router(setups.router)
+app.include_router(paper.router)
 
 
 @app.on_event("startup")
@@ -59,9 +62,11 @@ def _startup():
     radarwatch.init_db()
     feed.init_db()
     setup_store.init_db()
+    paper_store.init_db()
     monitor.start()  # vigilante de alertas → notificaciones Windows/Telegram
     breakout_monitor.start()  # radar de rupturas en directo (lista radarwatch)
     setup_monitor.start()  # vigilante de setups (rotura → retest → rebote)
+    paper_monitor.start()  # carteras ficticias (opera con el mercado USA abierto)
 
 
 @app.get("/api/health")

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
 
-from core import indicators, marketdata, signals, trendlines, yahoo
+from core import elliott, indicators, marketdata, signals, trendlines, yahoo
 from routers.common import analyze
 
 router = APIRouter(prefix="/api", tags=["market"])
@@ -123,6 +123,53 @@ def trendlines_ep(ticker: str, period: str = "1y", interval: str = "1d", prepost
             ],
         })
     return {"lines": out}
+
+
+@router.get("/elliott/{ticker}")
+def elliott_ep(
+    ticker: str,
+    period: str = "1y",
+    interval: str = "1d",
+    prepost: bool = False,
+    threshold: float = 0.05,
+):
+    """Conteo de ondas de Elliott para dibujar en el gráfico.
+
+    `points` = polilínea de la estructura, `labels` = etiquetas 1-5 / A-B-C
+    (marcadores) y `fibs` = niveles de la onda en curso. Los tiempos van en el
+    mismo formato que las velas de /chart para que todo encaje.
+    """
+    bars = _get_ohlcv(ticker, period, interval, prepost)
+    res = elliott.detect(bars, threshold=max(0.01, min(float(threshold), 0.5)))
+    if not res:
+        return {"found": False}
+
+    df = indicators.frame(bars)
+    intraday = indicators._is_intraday(df)
+    idxs = list(df.index)
+
+    points, labels = [], []
+    for p, label in zip(res["pivots"], res["labels"], strict=False):
+        i = min(p["index"], len(idxs) - 1)
+        t = indicators._time(idxs[i], intraday)
+        points.append({"time": t, "value": round(p["price"], 4)})
+        if label != "0":  # el punto de arranque no se etiqueta
+            labels.append({"time": t, "value": round(p["price"], 4), "text": label,
+                           "kind": p["kind"]})
+
+    return {
+        "found": True,
+        "pattern": res["pattern"],
+        "up": res["up"],
+        "current_wave": res["current_wave"],
+        "completed_waves": res["completed_waves"],
+        "confidence": res["confidence"],
+        "rules": res["rules"],
+        "threshold": res["threshold"],
+        "points": points,
+        "labels": labels,
+        "fibs": res["fibs"],
+    }
 
 
 @router.get("/price/{ticker}")

@@ -8,6 +8,7 @@ import Dashboard from "./components/Dashboard";
 import Radar from "./components/Radar";
 import AlertsBell from "./components/AlertsBell";
 import AlertsView from "./components/AlertsView";
+import PaperView from "./components/PaperView";
 import RestartButton from "./components/RestartButton";
 
 const T = {
@@ -18,6 +19,8 @@ const T = {
     portfolio: "Cartera",
     alerts: "Alertas",
     alertsTitle: "Mis alertas (ver y desactivar)",
+    paper: "Ficticias",
+    paperTitle: "Carteras ficticias (dinero simulado)",
     radarTitle: "Radar de oportunidades",
     backTo: "Volver a",
     aiPrefix: "IA",
@@ -32,6 +35,8 @@ const T = {
     portfolio: "Portfolio",
     alerts: "Alerts",
     alertsTitle: "My alerts (view and pause)",
+    paper: "Paper",
+    paperTitle: "Paper portfolios (simulated money)",
     radarTitle: "Opportunities radar",
     backTo: "Back to",
     aiPrefix: "AI",
@@ -61,7 +66,9 @@ export default function App() {
         ? t.radar
         : prev.view === "alerts"
           ? t.alerts
-          : t.portfolio
+          : prev.view === "paper"
+            ? t.paper
+            : t.portfolio
     : "";
 
   useEffect(() => {
@@ -77,8 +84,11 @@ export default function App() {
     const stock = params.get("stock");
     if (stock) {
       useStore.getState().setTicker(stock);
-    } else if (params.get("view") === "radar") {
-      useStore.getState().setView("radar");
+    } else {
+      const v = params.get("view");
+      if (v === "radar" || v === "alerts" || v === "paper") {
+        useStore.getState().setView(v);
+      }
     }
   }, []);
 
@@ -121,6 +131,17 @@ export default function App() {
           >
             🔔 <span className="hidden sm:inline">{t.alerts}</span>
           </button>
+          <button
+            onClick={() => setView("paper")}
+            className={`shrink-0 rounded-lg px-2.5 py-1.5 text-sm transition ${
+              !ticker && view === "paper"
+                ? "bg-[var(--color-accent)] text-white"
+                : "text-[var(--color-muted)] hover:text-[var(--color-ink)]"
+            }`}
+            title={t.paperTitle}
+          >
+            🧪 <span className="hidden sm:inline">{t.paper}</span>
+          </button>
           <div className="ml-auto flex items-center gap-3">
             {/* Selector de idioma */}
             <div className="flex overflow-hidden rounded-lg border border-[var(--color-line)] text-xs">
@@ -161,6 +182,8 @@ export default function App() {
           <Radar />
         ) : view === "alerts" ? (
           <AlertsView />
+        ) : view === "paper" ? (
+          <PaperView />
         ) : (
           <Dashboard />
         )}

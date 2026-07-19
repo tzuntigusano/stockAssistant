@@ -10,7 +10,7 @@ import {
 import { api } from "../api";
 import { useStore } from "../store/useStore";
 import { useLang } from "../i18n";
-import type { ChartBundle, LinePoint, TrendLine } from "../types";
+import type { ChartBundle, ElliottCount, LinePoint, TrendLine } from "../types";
 import EmaSettings from "./EmaSettings";
 import {
   allowedRanges,
@@ -37,6 +37,7 @@ const TX = {
     tfNote: 'TF = temporalidad de la EMA. "—" usa la del gráfico.',
     volume: "Volumen",
     trendlines: "Tendencias",
+    elliott: "Elliott",
     avg: "Mi media",
     expand: "Pantalla completa",
     exit: "Salir de pantalla completa",
@@ -54,6 +55,7 @@ const TX = {
     tfNote: 'TF = EMA timeframe. "—" uses the chart\'s.',
     volume: "Volume",
     trendlines: "Trendlines",
+    elliott: "Elliott",
     avg: "My avg",
     expand: "Fullscreen",
     exit: "Exit fullscreen",
@@ -95,6 +97,7 @@ export default function LiveChart({
   const [bundle, setBundle] = useState<ChartBundle | null>(null);
   const [emaData, setEmaData] = useState<Record<number, LinePoint[]>>({});
   const [trendlines, setTrendlines] = useState<TrendLine[]>([]);
+  const [elliott, setElliott] = useState<ElliottCount | null>(null);
   const [rtPrice, setRtPrice] = useState<number | null>(null);
   const [realtime, setRealtime] = useState(false);
 
@@ -313,6 +316,22 @@ export default function LiveChart({
     };
   }, [symbol, interval, period, prepost, reloadKey, opts.trendlines]);
 
+  // Conteo de ondas de Elliott (solo cuando está activado).
+  useEffect(() => {
+    if (!opts.elliott) {
+      setElliott(null);
+      return;
+    }
+    let cancelled = false;
+    api
+      .elliott(symbol, period, interval, prepost)
+      .then((r) => !cancelled && setElliott(r.found ? r : null))
+      .catch(() => !cancelled && setElliott(null));
+    return () => {
+      cancelled = true;
+    };
+  }, [symbol, interval, period, prepost, reloadKey, opts.elliott]);
+
   // Reconcilia overlays: EMAs (de emaData), Bollinger, volumen y niveles.
   useEffect(() => {
     const chart = chartRef.current;
@@ -323,6 +342,7 @@ export default function LiveChart({
     overlaysRef.current = [];
     priceLinesRef.current.forEach((pl) => candle.removePriceLine(pl));
     priceLinesRef.current = [];
+    candle.setMarkers([]); // las etiquetas de Elliott se repintan abajo
 
     const addLine = (data: any[], color: string, width = 2, lineStyle = 0) => {
       if (!data || !data.length) return;
@@ -386,6 +406,31 @@ export default function LiveChart({
           } as any)
         );
     }
+    // Ondas de Elliott: estructura, niveles Fibonacci y etiquetas 1-5 / A-B-C.
+    if (opts.elliott && elliott?.points?.length) {
+      addLine(elliott.points, "#e879f9", 2, 0);
+      (elliott.fibs ?? []).forEach((f) =>
+        priceLinesRef.current.push(
+          candle.createPriceLine({
+            price: f.price,
+            color: "rgba(232,121,249,0.55)",
+            lineWidth: 1,
+            lineStyle: 1,
+            title: f.label,
+          } as any)
+        )
+      );
+      candle.setMarkers(
+        (elliott.labels ?? []).map((m) => ({
+          time: m.time as any,
+          position: m.kind === "H" ? "aboveBar" : "belowBar",
+          color: "#e879f9",
+          shape: "circle" as const,
+          text: m.text,
+        }))
+      );
+    }
+
     // Mi precio medio (coste medio de mis compras) como línea horizontal.
     if (opts.avg && avgPrice) {
       priceLinesRef.current.push(
@@ -399,7 +444,7 @@ export default function LiveChart({
       );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bundle, emaData, opts, trendlines, avgPrice, JSON.stringify(emas)]);
+  }, [bundle, emaData, opts, trendlines, elliott, avgPrice, JSON.stringify(emas)]);
 
   // RSI en un mini-panel separado.
   useEffect(() => {
@@ -516,6 +561,7 @@ export default function LiveChart({
             ["levels", "S/R"],
             ["rsi", "RSI"],
             ["trendlines", tt.trendlines],
+            ["elliott", tt.elliott],
             ...(avgPrice != null ? [["avg", tt.avg]] : []),
           ] as [keyof Opts, string][]
         ).map(([k, label]) => (

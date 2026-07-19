@@ -167,6 +167,9 @@ def build_strategy_stream(ticker: str, body: StrategyIn):
     parts = []
     if strategy.wants_technical(sel):
         parts.append(strategy.build_technical_context(t, q, ind, verdict, levels))
+        # Conteo de ondas ya calculado (determinista): la IA solo lo narra.
+        if ew := common.elliott_context(ticker, lang):
+            parts.append(ew)
     if strategy.wants_position(sel):
         parts.append(strategy.build_position_context(position))
     if strategy.wants_fundamental(sel):

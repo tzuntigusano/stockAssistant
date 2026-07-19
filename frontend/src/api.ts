@@ -5,11 +5,17 @@ import type {
   BreakoutScore,
   BreakoutStatus,
   ChartBundle,
+  ElliottCount,
   FeedPost,
   LinePoint,
   Lot,
   ModelsStatus,
   NewsItem,
+  PaperCompare,
+  PaperLogEntry,
+  PaperMode,
+  PaperPortfolio,
+  PaperStatus,
   Portfolio,
   Position,
   RadarConfig,
@@ -132,6 +138,12 @@ export const api = {
         `/api/trendlines/${ticker}?period=${period}&interval=${interval}&prepost=${prepost}`
       )
     ),
+  elliott: (ticker: string, period = "1y", interval = "1d", prepost = false) =>
+    gate(() =>
+      req<ElliottCount>(
+        `/api/elliott/${ticker}?period=${period}&interval=${interval}&prepost=${prepost}`
+      )
+    ),
   price: (ticker: string) =>
     req<{ price: number | null; realtime: boolean }>(`/api/price/${ticker}`),
 
@@ -236,6 +248,35 @@ export const api = {
       body: JSON.stringify({ active }),
     }),
   deleteSetup: (id: number) => req<{ deleted: boolean }>(`/api/setups/${id}`, { method: "DELETE" }),
+
+  paperCompare: () => req<PaperCompare>(`/api/paper?lang=${currentLang()}`),
+  paperOne: (mode: PaperMode) => req<PaperPortfolio>(`/api/paper/${mode}?lang=${currentLang()}`),
+  paperStatus: () => req<PaperStatus>(`/api/paper/status`),
+  paperToggle: (enabled: boolean) =>
+    req<{ enabled: boolean }>(`/api/paper/toggle`, {
+      method: "POST",
+      body: JSON.stringify({ enabled }),
+    }),
+  paperRun: () =>
+    req<{ candidates: number }>(`/api/paper/run`, {
+      method: "POST",
+      body: JSON.stringify({ lang: currentLang() }),
+    }),
+  paperLog: (mode?: PaperMode, limit = 60) =>
+    req<{ entries: PaperLogEntry[] }>(
+      `/api/paper/log?limit=${limit}${mode ? `&mode=${mode}` : ""}`
+    ),
+  paperClosePosition: (id: number) =>
+    req<{ closed: boolean; price: number; pnl: number }>(
+      `/api/paper/positions/${id}/close?lang=${currentLang()}`,
+      { method: "POST" }
+    ),
+  paperPositionAlerts: (id: number) =>
+    req<{ created: Alert[] }>(`/api/paper/positions/${id}/alerts?lang=${currentLang()}`, {
+      method: "POST",
+    }),
+  paperReset: (mode: PaperMode) =>
+    req<{ reset: boolean }>(`/api/paper/reset/${mode}`, { method: "POST" }),
 
   health: () => req<{ ok: boolean }>(`/api/health`),
   restartBackend: () => req<{ restarting: boolean }>(`/api/system/restart`, { method: "POST" }),

@@ -210,6 +210,20 @@ export interface LinePoint {
   value: number;
 }
 
+export interface ElliottCount {
+  found: boolean;
+  pattern?: "impulse_up" | "impulse_down" | "abc";
+  up?: boolean;
+  current_wave?: number;
+  completed_waves?: number;
+  confidence?: number;
+  rules?: Record<string, boolean>;
+  threshold?: number;
+  points?: LinePoint[];
+  labels?: { time: ChartTime; value: number; text: string; kind: string }[];
+  fibs?: { label: string; price: number }[];
+}
+
 export interface TrendLine {
   kind: "support" | "resistance";
   touches: number;
@@ -343,6 +357,91 @@ export interface FeedPost {
   text: string | null;
   image: string | null; // nombre de fichero servido por /api/feed/image/{name}
   created_at: number; // epoch segundos
+}
+
+// --- Carteras ficticias (paper trading) ---
+export type PaperMode = "normal" | "fast";
+
+export interface PaperPosition {
+  id: number;
+  mode: PaperMode;
+  ticker: string;
+  name: string;
+  side: "long" | "short";
+  shares: number;
+  entry_price: number;
+  entry_at: number;
+  stop: number;
+  initial_stop: number;
+  target: number;
+  rr: number;
+  horizon: string;
+  horizon_label?: string;
+  thesis: string;
+  score: number;
+  stop_moved: boolean;
+  runner: boolean; // superó el objetivo y se dejó correr (cartera rápida)
+  status: "open" | "closed";
+  // Solo en abiertas
+  current_price?: number | null;
+  unrealized_pnl?: number;
+  unrealized_pnl_pct?: number;
+  days_held?: number;
+  // Solo en cerradas
+  exit_price?: number | null;
+  exit_at?: number | null;
+  exit_reason?: string;
+  exit_reason_label?: string;
+  exit_text?: string;
+  pnl?: number;
+  pnl_pct?: number;
+}
+
+export interface PaperPortfolio {
+  mode: PaperMode;
+  cash: number;
+  initial_cash: number;
+  equity: number;
+  total_pnl: number;
+  total_pnl_pct: number;
+  realized_pnl: number;
+  open_positions: PaperPosition[];
+  closed_positions: PaperPosition[];
+  trades: number;
+  wins: number;
+  win_rate: number | null;
+  config: {
+    risk_pct: number;
+    max_positions: number;
+    min_score: number;
+    horizon: string;
+    horizon_label: string;
+    max_hold_days: number;
+  };
+}
+
+export interface PaperCompare {
+  portfolios: Record<PaperMode, PaperPortfolio>;
+  market_open: boolean;
+  leader: PaperMode;
+}
+
+export interface PaperLogEntry {
+  id: number;
+  mode: PaperMode;
+  at: number;
+  kind: "entry" | "exit" | "stop" | "skip" | "cycle" | "system";
+  ticker: string;
+  text: string;
+}
+
+export interface PaperStatus {
+  enabled: boolean;
+  running: boolean;
+  market_open: boolean;
+  last_run: number | null;
+  interval: number;
+  ny_time: string;
 }
 
 export interface SetupAlert {
